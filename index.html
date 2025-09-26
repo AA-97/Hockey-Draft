@@ -3,15 +3,57 @@
 <head>
   <title>Fantasy Hockey Draft</title>
   <style>
-    body { font-family: sans-serif; }
-    .user-management, .draft-area, .points-display { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
-    label { display: inline-block; width: 150px; margin-bottom: 5px; }
-    select, input[type="text"], button { padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box; }
-    #add-user-form { display: none; margin-top: 10px; }
-    .player-selection { display: flex; align-items: center; margin-bottom: 10px; }
-    .player-selection label { width: 150px; }
-    .draft-area select { width: 250px; }
-    #points-display {
+    body {
+        font-family: sans-serif;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    /* Base styles for all screen sizes */
+    .user-management, .draft-area, .points-display, .rankings-panel {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+    label {
+        display: inline-block;
+        width: 150px;
+        margin-bottom: 5px;
+    }
+
+    select, input[type="text"], button {
+        padding: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        box-sizing: border-box;
+    }
+
+    #add-user-form {
+        display: none;
+        margin-top: 10px;
+    }
+
+    .player-selection {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        flex-wrap: wrap; /* Allows player selections to wrap on smaller screens */
+    }
+
+    .player-selection label {
+        width: 150px;
+    }
+
+    .draft-area select {
+        width: 100%; /* Full width for selects in draft area on mobile */
+    }
+
+    /* General pop-up window styling */
+    #points-display, #goalie-points-display, #data-input-window, #goalie-data-input-window, #individual-rankings-display {
         display: none;
         position: fixed;
         top: 50%;
@@ -25,29 +67,30 @@
         z-index: 10;
         max-height: 80vh;
         overflow-y: auto;
-        width: 80%;
+        width: 90%; /* Adjust width for mobile */
         max-width: 600px;
+        text-align: center;
     }
 
-    #points-display h2 {
+    #points-display h2, #goalie-points-display h2, #data-input-window h2, #goalie-data-input-window h2, #individual-rankings-display h2 {
         margin-top: 0;
         margin-bottom: 10px;
         text-align: center;
     }
 
-    #points-display ul {
+    #points-display ul, #goalie-points-display ul {
         list-style-type: none;
         padding: 0;
         margin-bottom: 20px;
     }
 
-    #points-display li {
+    #points-display li, #goalie-points-display li {
         margin-bottom: 5px;
         border-bottom: 1px solid #eee;
         padding-bottom: 5px;
     }
 
-    #points-display .close-button {
+    .close-button {
         position: absolute;
         top: 10px;
         right: 10px;
@@ -56,71 +99,35 @@
         color: #888;
     }
 
-    #points-display .close-button:hover {
+    .close-button:hover {
         color: #333;
     }
 
-    #points-display .total-points {
+    .total-points {
         font-weight: bold;
         text-align: center;
         font-size: 1.2em;
         margin-top: 10px;
     }
 
-    #points-table {
+    /* Table styling for points and data input */
+    #points-table, #goalie-points-table, #data-input-table, #goalie-data-input-table, #individual-rankings-table {
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 20px;
     }
 
-    #points-table th, #points-table td {
+    #points-table th, #points-table td, #goalie-points-table th, #goalie-points-table td, #data-input-table th, #data-input-table td, #goalie-data-input-table th, #goalie-data-input-table td, #individual-rankings-table th, #individual-rankings-table td {
         border: 1px solid #ddd;
         padding: 8px;
         text-align: left;
     }
 
-    #points-table th {
+    #points-table th, #goalie-points-table th, #data-input-table th, #goalie-data-input-table th, #individual-rankings-table th {
         background-color: #f0f0f0;
     }
-    #points-display .return-button{
-        margin-top: 20px;
-        padding: 10px 20px;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-    }
-    #points-display .return-button:hover{
-        background-color: #367c39;
-    }
 
-    #data-input-window {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: white;
-        padding: 20px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        z-index: 11;
-        width: 80%;
-        max-width: 600px;
-        height: 60vh;
-        overflow-y: auto;
-    }
-
-    #data-input-window h2 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        text-align: center;
-    }
-
-    #data-input-window textarea {
+    #data-input-window textarea, #goalie-data-input-window textarea {
         width: 100%;
         height: 70%;
         box-sizing: border-box;
@@ -132,12 +139,48 @@
         resize: none;
     }
 
-    #data-input-window .button-container {
+    .button-container {
         display: flex;
         justify-content: space-around;
+        flex-direction: column; /* Stack buttons vertically on mobile */
     }
 
-    #data-input-window .button-container button {
+    .button-container button {
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    .button-container button:last-child {
+        margin-bottom: 0;
+    }
+
+    .button-container button:hover {
+        background-color: #367c39;
+    }
+
+    .button-container button:nth-child(2) {
+        background-color: #f44336;
+        color: white;
+    }
+
+    .button-container button:nth-child(2):hover {
+        background-color: #d32f2f;
+    }
+
+    .paste-instructions {
+        font-size: 0.9em;
+        color: #555;
+        margin-bottom: 10px;
+    }
+
+    .return-button {
+        margin-top: 20px;
         padding: 10px 20px;
         background-color: #4CAF50;
         color: white;
@@ -147,50 +190,12 @@
         font-size: 16px;
     }
 
-    #data-input-window .button-container button:hover {
+    .return-button:hover {
         background-color: #367c39;
     }
 
-    #data-input-window .button-container button:nth-child(2) {
-        background-color: #f44336;
-        color: white;
-    }
-
-    #data-input-window .button-container button:nth-child(2):hover {
-        background-color: #d32f2f;
-    }
-
-    #data-input-window table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 10px;
-        table-layout: fixed;
-    }
-
-    #data-input-window table td,
-    #data-input-window table th {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-        word-wrap: break-word;
-    }
-
-    #data-input-window table th {
-        background-color: #f0f0f0;
-    }
-
-    #data-input-window .paste-instructions {
-        font-size: 0.9em;
-        color: #555;
-        margin-bottom: 10px;
-    }
-
-    #data-input-table {
-        width: 100%;
-    }
-
     #data-input-table td input {
-        width: calc(100% - 16px);
+        width: 100%;
         padding: 0;
         border: none;
         font-size: 1em;
@@ -202,246 +207,59 @@
         background-color: #f0f8ff;
     }
 
-    #goalie-points-display {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: white;
-        padding: 20px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        z-index: 10;
-        max-height: 80vh;
-        overflow-y: auto;
-        width: 80%;
-        max-width: 600px;
+    /* New styles for responsiveness */
+
+    /* Use flexbox to center content and control layout on small screens */
+    @media screen and (max-width: 768px) {
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .user-management, .draft-area, .points-display {
+            width: 90%;
+            margin: 10px auto;
+        }
+
+        /* Center the pop-up windows and make them scrollable */
+        #points-display, #goalie-points-display, #data-input-window, #goalie-data-input-window, #individual-rankings-display {
+            width: 95%; /* Make pop-ups take up more of the screen */
+            padding: 10px;
+            max-height: 90vh; /* Adjust max height for better fit */
+        }
+
+        /* Make tables horizontally scrollable */
+        .points-display table, .rankings-panel table {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap; /* Prevents text from wrapping inside cells */
+        }
+
+        #points-table, #goalie-points-table, #individual-rankings-table {
+            width: auto;
+            min-width: 100%; /* Ensures table is at least the full width of its container */
+        }
+
+        #points-table th, #points-table td, #goalie-points-table th, #goalie-points-table td, #individual-rankings-table th, #individual-rankings-table td {
+            text-align: center; /* Center table cell content for better readability */
+            padding: 5px; /* Reduce padding for smaller screens */
+        }
     }
 
-    #goalie-points-display h2 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        text-align: center;
+    /* Centering the points chart when a button is clicked */
+    .points-display.active {
+        display: block;
+        visibility: visible;
+        opacity: 1;
+        transition: opacity 0.3s ease;
     }
 
-    #goalie-points-display ul {
-        list-style-type: none;
-        padding: 0;
-        margin-bottom: 20px;
-    }
-
-    #goalie-points-display li {
-        margin-bottom: 5px;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 5px;
-    }
-
-    #goalie-points-display .close-button {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        cursor: pointer;
-        font-size: 20px;
-        color: #888;
-    }
-
-    #goalie-points-display .close-button:hover {
-        color: #333;
-    }
-
-    #goalie-points-display .total-points {
-        font-weight: bold;
-        text-align: center;
-        font-size: 1.2em;
-        margin-top: 10px;
-    }
-
-    #goalie-points-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-    }
-
-    #goalie-points-table th,
-    #goalie-points-table td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-    }
-
-    #goalie-points-table th {
-        background-color: #f0f0f0;
-    }
-
-    #goalie-points-display .return-button {
-        margin-top: 20px;
-        padding: 10px 20px;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-    }
-
-    #goalie-points-display .return-button:hover {
-        background-color: #367c39;
-    }
-
-    #goalie-data-input-window {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: white;
-        padding: 20px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        z-index: 11;
-        width: 80%;
-        max-width: 600px;
-        height: 60vh;
-        overflow-y: auto;
-    }
-
-    #goalie-data-input-window h2 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        text-align: center;
-    }
-
-    #goalie-data-input-window textarea {
-        width: 100%;
-        height: 70%;
-        box-sizing: border-box;
-        margin-bottom: 10px;
-        border: 1px solid #ddd;
-        border-radius: 3px;
-        padding: 8px;
-        font-family: monospace;
-        resize: none;
-    }
-
-    #goalie-data-input-window .button-container {
-        display: flex;
-        justify-content: space-around;
-    }
-
-    #goalie-data-input-window .button-container button {
-        padding: 10px 20px;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-    }
-
-    #goalie-data-input-window .button-container button:hover {
-        background-color: #367c39;
-    }
-
-    #goalie-data-input-window .button-container button:nth-child(2) {
-        background-color: #f44336;
-        color: white;
-    }
-
-    #goalie-data-input-window .button-container button:nth-child(2):hover {
-        background-color: #d32f2f;
-    }
-
-    #goalie-data-input-window table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 10px;
-        table-layout: fixed;
-    }
-
-    #goalie-data-input-window table td,
-    #goalie-data-input-window table th {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-        word-wrap: break-word;
-    }
-
-    #goalie-data-input-window table th {
-        background-color: #f0f0f0;
-    }
-
-    #goalie-data-input-window .paste-instructions {
-        font-size: 0.9em;
-        color: #555;
-        margin-bottom: 10px;
-    }
-
-    #goalie-data-input-table {
-        width: 100%;
-    }
-
-    #goalie-data-input-table td input {
-        width: calc(100% - 16px);
-        padding: 0;
-        border: none;
-        font-size: 1em;
-        box-sizing: border-box;
-    }
-
-    #goalie-data-input-table td input:focus {
-        outline: none;
-        background-color: #f0f8ff;
-    }
-
-
-
-
-    .rankings-panel {
-        position: fixed; /* Or absolute, depending on your layout */
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: #f9f9f9;
-        border: 1px solid #ccc;
-        padding: 20px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        z-index: 1000; /* Ensure it's on top of other content */
-    }
-
-    .rankings-table-container {
-        overflow-x: auto; /* Enable horizontal scrolling if needed */
-        margin-bottom: 15px;
-    }
-
-    .rankings-table-container table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .rankings-table-container th, .rankings-table-container td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-    }
-
-    .rankings-table-container th {
-        background-color: #f2f2f2;
-    }
-
-    .return-button {
-        padding: 10px 15px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-
-    .return-button:hover {
-        background-color: #0056b3;
+    .rankings-panel.active {
+        display: block;
+        visibility: visible;
+        opacity: 1;
+        transition: opacity 0.3s ease;
     }
 
   </style>
