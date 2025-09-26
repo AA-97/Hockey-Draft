@@ -207,7 +207,7 @@
         background-color: #f0f8ff;
     }
 
-    /* New styles for responsiveness */
+    /* New styles for responsiveness, prioritizing vertical phone view */
 
     /* Use flexbox to center content and control layout on small screens */
     @media screen and (max-width: 768px) {
@@ -245,6 +245,22 @@
             text-align: center; /* Center table cell content for better readability */
             padding: 5px; /* Reduce padding for smaller screens */
         }
+
+        /* New rules to increase font size and input sizes for better visibility */
+        body {
+            font-size: 1.1em;
+        }
+        h2 {
+            font-size: 1.5em;
+        }
+        button, select, input[type="text"] {
+            font-size: 1.1em;
+            padding: 12px; /* Increase padding for easier tapping */
+        }
+        label {
+            width: auto;
+            margin-right: 10px;
+        }
     }
 
     /* Centering the points chart when a button is clicked */
@@ -261,7 +277,6 @@
         opacity: 1;
         transition: opacity 0.3s ease;
     }
-
   </style>
 </head>
 <body>
