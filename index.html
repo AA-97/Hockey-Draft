@@ -16,6 +16,7 @@
         padding: 15px;
         border: 1px solid #ccc;
         border-radius: 5px;
+        box-sizing: border-box; /* Ensures padding and border are included in the element's total width and height */
     }
 
     label {
@@ -41,7 +42,7 @@
         display: flex;
         align-items: center;
         margin-bottom: 10px;
-        flex-wrap: wrap; /* Allows player selections to wrap on smaller screens */
+        flex-wrap: wrap;
     }
 
     .player-selection label {
@@ -49,7 +50,7 @@
     }
 
     .draft-area select {
-        width: 100%; /* Full width for selects in draft area on mobile */
+        width: 100%;
     }
 
     /* General pop-up window styling */
@@ -67,7 +68,7 @@
         z-index: 10;
         max-height: 80vh;
         overflow-y: auto;
-        width: 90%; /* Adjust width for mobile */
+        width: 90%;
         max-width: 600px;
         text-align: center;
     }
@@ -76,18 +77,6 @@
         margin-top: 0;
         margin-bottom: 10px;
         text-align: center;
-    }
-
-    #points-display ul, #goalie-points-display ul {
-        list-style-type: none;
-        padding: 0;
-        margin-bottom: 20px;
-    }
-
-    #points-display li, #goalie-points-display li {
-        margin-bottom: 5px;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 5px;
     }
 
     .close-button {
@@ -142,7 +131,7 @@
     .button-container {
         display: flex;
         justify-content: space-around;
-        flex-direction: column; /* Stack buttons vertically on mobile */
+        flex-direction: column;
     }
 
     .button-container button {
@@ -207,9 +196,7 @@
         background-color: #f0f8ff;
     }
 
-    /* New styles for responsiveness, prioritizing vertical phone view */
-
-    /* Use flexbox to center content and control layout on small screens */
+    /* Media query for mobile phones */
     @media screen and (max-width: 768px) {
         body {
             display: flex;
@@ -217,49 +204,62 @@
             align-items: center;
         }
 
-        .user-management, .draft-area, .points-display {
-            width: 90%;
+        .user-management, .draft-area, .points-display, .rankings-panel {
+            width: 95%; /* Make the main containers wider */
             margin: 10px auto;
         }
 
-        /* Center the pop-up windows and make them scrollable */
-        #points-display, #goalie-points-display, #data-input-window, #goalie-data-input-window, #individual-rankings-display {
-            width: 95%; /* Make pop-ups take up more of the screen */
-            padding: 10px;
-            max-height: 90vh; /* Adjust max height for better fit */
-        }
-
-        /* Make tables horizontally scrollable */
-        .points-display table, .rankings-panel table {
-            display: block;
-            overflow-x: auto;
-            white-space: nowrap; /* Prevents text from wrapping inside cells */
-        }
-
-        #points-table, #goalie-points-table, #individual-rankings-table {
-            width: auto;
-            min-width: 100%; /* Ensures table is at least the full width of its container */
-        }
-
-        #points-table th, #points-table td, #goalie-points-table th, #goalie-points-table td, #individual-rankings-table th, #individual-rankings-table td {
-            text-align: center; /* Center table cell content for better readability */
-            padding: 5px; /* Reduce padding for smaller screens */
-        }
-
-        /* New rules to increase font size and input sizes for better visibility */
+        /* Increase font sizes for better readability */
         body {
             font-size: 1.1em;
         }
         h2 {
             font-size: 1.5em;
         }
+
+        /* Make buttons and inputs larger and easier to tap */
         button, select, input[type="text"] {
             font-size: 1.1em;
-            padding: 12px; /* Increase padding for easier tapping */
+            padding: 12px;
         }
         label {
             width: auto;
             margin-right: 10px;
+        }
+        .player-selection {
+            flex-direction: column; /* Stack label and select vertically */
+            align-items: flex-start;
+        }
+        .player-selection label {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .draft-area select {
+            width: 100%;
+        }
+
+        /* Center the pop-up windows and make them scrollable */
+        #points-display, #goalie-points-display, #data-input-window, #goalie-data-input-window, #individual-rankings-display {
+            width: 95%;
+            padding: 10px;
+            max-height: 90vh;
+        }
+
+        /* Make tables horizontally scrollable */
+        .points-display table, .rankings-panel table {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        #points-table, #goalie-points-table, #individual-rankings-table {
+            width: auto;
+            min-width: 100%;
+        }
+
+        #points-table th, #points-table td, #goalie-points-table th, #goalie-points-table td, #individual-rankings-table th, #individual-rankings-table td {
+            text-align: center;
+            padding: 5px;
         }
     }
 
