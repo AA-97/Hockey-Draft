@@ -3,89 +3,109 @@
 <head>
   <title>Fantasy Hockey Draft</title>
   <style>
+    /* General body and font styles */
     body {
-        font-family: sans-serif;
+        font-family: 'Inter', sans-serif;
+        background-color: #f0f4f8; /* Light, clean background */
+        color: #334e68; /* Dark, readable text */
         margin: 0;
-        padding: 0;
+        padding: 20px;
         box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
 
-    /* Base styles for all screen sizes */
+    /* Card-like container styling */
     .user-management, .draft-area, .points-display, .rankings-panel {
+        background-color: #ffffff;
         margin-bottom: 20px;
-        padding: 15px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        box-sizing: border-box; /* Ensures padding and border are included in the element's total width and height */
+        padding: 20px;
+        border-radius: 12px; /* Smoothed corners */
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Soft shadow for depth */
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 768px; /* Constrain max width for desktop */
+    }
+
+    h2 {
+        font-weight: 700;
+        color: #1a202c;
+        margin-top: 0;
+        margin-bottom: 15px;
     }
 
     label {
         display: inline-block;
-        width: 150px;
         margin-bottom: 5px;
+        font-weight: 600;
     }
 
     select, input[type="text"], button {
-        padding: 8px;
-        margin-bottom: 10px;
-        border: 1px solid #ddd;
-        border-radius: 3px;
+        padding: 12px;
+        margin-bottom: 12px;
+        border: 1px solid #d1d9e6;
+        border-radius: 8px;
         box-sizing: border-box;
+        font-size: 16px;
     }
 
     #add-user-form {
         display: none;
-        margin-top: 10px;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #e2e8f0;
     }
 
     .player-selection {
         display: flex;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
         flex-wrap: wrap;
+        gap: 10px;
     }
 
     .player-selection label {
-        width: 150px;
+        flex-grow: 1;
+        min-width: 100px;
+    }
+
+    .player-selection select {
+        flex-grow: 2;
+        min-width: 150px;
     }
 
     .draft-area select {
         width: 100%;
     }
 
-    /* General pop-up window styling */
+    /* Pop-up window styling */
     #points-display, #goalie-points-display, #data-input-window, #goalie-data-input-window, #individual-rankings-display {
         display: none;
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background-color: white;
-        padding: 20px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        background-color: #ffffff;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
         z-index: 10;
-        max-height: 80vh;
+        max-height: 90vh;
         overflow-y: auto;
-        width: 90%;
-        max-width: 600px;
-        text-align: center;
-    }
-
-    #points-display h2, #goalie-points-display h2, #data-input-window h2, #goalie-data-input-window h2, #individual-rankings-display h2 {
-        margin-top: 0;
-        margin-bottom: 10px;
+        width: 95%;
+        max-width: 700px;
         text-align: center;
     }
 
     .close-button {
         position: absolute;
-        top: 10px;
-        right: 10px;
+        top: 15px;
+        right: 15px;
         cursor: pointer;
-        font-size: 20px;
+        font-size: 24px;
         color: #888;
+        transition: color 0.2s;
     }
 
     .close-button:hover {
@@ -93,73 +113,94 @@
     }
 
     .total-points {
-        font-weight: bold;
-        text-align: center;
-        font-size: 1.2em;
-        margin-top: 10px;
+        font-weight: 700;
+        font-size: 1.5em;
+        margin-top: 20px;
+        color: #1a202c;
     }
 
-    /* Table styling for points and data input */
-    #points-table, #goalie-points-table, #data-input-table, #goalie-data-input-table, #individual-rankings-table {
+    /* Table styling */
+    table {
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 20px;
     }
 
-    #points-table th, #points-table td, #goalie-points-table th, #goalie-points-table td, #data-input-table th, #data-input-table td, #goalie-data-input-table th, #goalie-data-input-table td, #individual-rankings-table th, #individual-rankings-table td {
-        border: 1px solid #ddd;
-        padding: 8px;
+    th, td {
+        border: 1px solid #e2e8f0;
+        padding: 12px;
         text-align: left;
     }
 
-    #points-table th, #goalie-points-table th, #data-input-table th, #goalie-data-input-table th, #individual-rankings-table th {
-        background-color: #f0f0f0;
+    th {
+        background-color: #f0f4f8;
+        font-weight: 600;
+        color: #334e68;
     }
 
     #data-input-window textarea, #goalie-data-input-window textarea {
         width: 100%;
-        height: 70%;
+        height: 150px;
         box-sizing: border-box;
-        margin-bottom: 10px;
-        border: 1px solid #ddd;
-        border-radius: 3px;
-        padding: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #d1d9e6;
+        border-radius: 8px;
+        padding: 10px;
         font-family: monospace;
-        resize: none;
+        resize: vertical;
     }
 
     .button-container {
         display: flex;
         justify-content: space-around;
         flex-direction: column;
+        gap: 15px;
     }
 
-    .button-container button {
-        padding: 10px 20px;
-        background-color: #4CAF50;
-        color: white;
+    .button-container button, .return-button, #user-points-button, #open-goalie-data-input-button, #open-data-input-button, #individual-rankings-button {
+        padding: 15px 25px;
         border: none;
-        border-radius: 5px;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 16px;
-        margin-bottom: 10px;
+        font-weight: 600;
+        color: #fff;
+        transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    .button-container button:last-child {
-        margin-bottom: 0;
+    /* Primary button color */
+    #save-user-button, #save-roster-button, #save-data-button, #save-goalie-data-button, .return-button, #user-points-button, #open-goalie-data-input-button, #open-data-input-button, #individual-rankings-button {
+        background-color: #4a90e2; /* Calming blue */
+    }
+    #save-user-button:hover, #save-roster-button:hover, #save-data-button:hover, #save-goalie-data-button:hover, .return-button:hover, #user-points-button:hover, #open-goalie-data-input-button:hover, #open-data-input-button:hover, #individual-rankings-button:hover {
+        background-color: #357bd9;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
     }
 
-    .button-container button:hover {
-        background-color: #367c39;
+    /* Danger button color */
+    #remove-user-button, #clear-data-button, #clear-goalie-data-button {
+        background-color: #e74c3c; /* A strong red */
+    }
+    #remove-user-button:hover, #clear-data-button:hover, #clear-goalie-data-button:hover {
+        background-color: #c0392b;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
     }
 
-    .button-container button:nth-child(2) {
-        background-color: #f44336;
-        color: white;
+    #data-input-table td input {
+        width: 100%;
+        padding: 0;
+        border: none;
+        font-size: 1em;
+        box-sizing: border-box;
+        background-color: transparent;
     }
 
-    .button-container button:nth-child(2):hover {
-        background-color: #d32f2f;
+    #data-input-table td input:focus {
+        outline: none;
+        background-color: #f0f4f8;
     }
 
     .paste-instructions {
@@ -170,79 +211,44 @@
 
     .return-button {
         margin-top: 20px;
-        padding: 10px 20px;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-    }
-
-    .return-button:hover {
-        background-color: #367c39;
-    }
-
-    #data-input-table td input {
-        width: 100%;
-        padding: 0;
-        border: none;
-        font-size: 1em;
-        box-sizing: border-box;
-    }
-
-    #data-input-table td input:focus {
-        outline: none;
-        background-color: #f0f8ff;
     }
 
     /* Media query for mobile phones */
     @media screen and (max-width: 768px) {
         body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            padding: 10px;
+            font-size: 1.1em;
         }
 
         .user-management, .draft-area, .points-display, .rankings-panel {
-            width: 95%; /* Make the main containers wider */
+            width: 100%;
             margin: 10px auto;
         }
 
-        /* Increase font sizes for better readability */
-        body {
-            font-size: 1.1em;
-        }
-        h2 {
-            font-size: 1.5em;
+        button, select, input[type="text"] {
+            font-size: 1em;
+            padding: 12px;
+            width: 100%; /* Full width on mobile */
         }
 
-        /* Make buttons and inputs larger and easier to tap */
-        button, select, input[type="text"] {
-            font-size: 1.1em;
-            padding: 12px;
-        }
         label {
-            width: auto;
-            margin-right: 10px;
-        }
-        .player-selection {
-            flex-direction: column; /* Stack label and select vertically */
-            align-items: flex-start;
-        }
-        .player-selection label {
             width: 100%;
             margin-bottom: 5px;
         }
-        .draft-area select {
+
+        .player-selection {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+        .player-selection label, .player-selection select {
             width: 100%;
         }
 
-        /* Center the pop-up windows and make them scrollable */
         #points-display, #goalie-points-display, #data-input-window, #goalie-data-input-window, #individual-rankings-display {
-            width: 95%;
-            padding: 10px;
-            max-height: 90vh;
+            width: 98%;
+            padding: 15px;
+            max-height: 95vh;
         }
 
         /* Make tables horizontally scrollable */
@@ -252,30 +258,10 @@
             white-space: nowrap;
         }
 
-        #points-table, #goalie-points-table, #individual-rankings-table {
-            width: auto;
-            min-width: 100%;
-        }
-
-        #points-table th, #points-table td, #goalie-points-table th, #goalie-points-table td, #individual-rankings-table th, #individual-rankings-table td {
+        th, td {
             text-align: center;
-            padding: 5px;
+            padding: 8px;
         }
-    }
-
-    /* Centering the points chart when a button is clicked */
-    .points-display.active {
-        display: block;
-        visibility: visible;
-        opacity: 1;
-        transition: opacity 0.3s ease;
-    }
-
-    .rankings-panel.active {
-        display: block;
-        visibility: visible;
-        opacity: 1;
-        transition: opacity 0.3s ease;
     }
   </style>
 </head>
@@ -303,7 +289,6 @@
 <div class="draft-area">
   <h2>Draft Players</h2>
   <div id="player-draft-selections">
-
   </div>
   <button id="save-roster-button">Save Roster</button>
 </div>
