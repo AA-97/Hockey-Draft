@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fantasy Hockey Draft</title>
+  <style>
+    body {
+        font-family: sans-serif;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    /* Base styles for all screen sizes */
+    .user-management, .draft-area, .points-display, .rankings-panel {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+    label {
+        display: inline-block;
+        width: 150px;
+        margin-bottom: 5px;
+    }
+
+    select, input[type="text"], button {
+        padding: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        box-sizing: border-box;
+    }
+
+    #add-user-form {
+        display: none;
+        margin-top: 10px;
+    }
+
+    .player-selection {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        flex-wrap: wrap; /* Allows player selections to wrap on smaller screens */
+    }
+
+    .player-selection label {
+        width: 150px;
+    }
+
+    .draft-area select {
+        width: 100%; /* Full width for selects in draft area on mobile */
+    }
+
+    /* General pop-up window styling */
+    #points-display, #goalie-points-display, #data-input-window, #goalie-data-input-window, #individual-rankings-display {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+        max-height: 80vh;
+        overflow-y: auto;
+        width: 90%; /* Adjust width for mobile */
+        max-width: 600px;
+        text-align: center;
+    }
+
+    #points-display h2, #goalie-points-display h2, #data-input-window h2, #goalie-data-input-window h2, #individual-rankings-display h2 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    #points-display ul, #goalie-points-display ul {
+        list-style-type: none;
+        padding: 0;
+        margin-bottom: 20px;
+    }
+
+    #points-display li, #goalie-points-display li {
+        margin-bottom: 5px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+    }
+
+    .close-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        cursor: pointer;
+        font-size: 20px;
+        color: #888;
+    }
+
+    .close-button:hover {
+        color: #333;
+    }
+
+    .total-points {
+        font-weight: bold;
+        text-align: center;
+        font-size: 1.2em;
+        margin-top: 10px;
+    }
+
+    /* Table styling for points and data input */
+    #points-table, #goalie-points-table, #data-input-table, #goalie-data-input-table, #individual-rankings-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    #points-table th, #points-table td, #goalie-points-table th, #goalie-points-table td, #data-input-table th, #data-input-table td, #goalie-data-input-table th, #goalie-data-input-table td, #individual-rankings-table th, #individual-rankings-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+
+    #points-table th, #goalie-points-table th, #data-input-table th, #goalie-data-input-table th, #individual-rankings-table th {
+        background-color: #f0f0f0;
+    }
+
+    #data-input-window textarea, #goalie-data-input-window textarea {
+        width: 100%;
+        height: 70%;
+        box-sizing: border-box;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        padding: 8px;
+        font-family: monospace;
+        resize: none;
+    }
+
+    .button-container {
+        display: flex;
+        justify-content: space-around;
+        flex-direction: column; /* Stack buttons vertically on mobile */
+    }
+
+    .button-container button {
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    .button-container button:last-child {
+        margin-bottom: 0;
+    }
+
+    .button-container button:hover {
+        background-color: #367c39;
+    }
+
+    .button-container button:nth-child(2) {
+        background-color: #f44336;
+        color: white;
+    }
+
+    .button-container button:nth-child(2):hover {
+        background-color: #d32f2f;
+    }
+
+    .paste-instructions {
+        font-size: 0.9em;
+        color: #555;
+        margin-bottom: 10px;
+    }
+
+    .return-button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    .return-button:hover {
+        background-color: #367c39;
+    }
+
+    #data-input-table td input {
+        width: 100%;
+        padding: 0;
+        border: none;
+        font-size: 1em;
+        box-sizing: border-box;
+    }
+
+    #data-input-table td input:focus {
+        outline: none;
+        background-color: #f0f8ff;
+    }
+
+    /* New styles for responsiveness, prioritizing vertical phone view */
+
+    /* Use flexbox to center content and control layout on small screens */
+    @media screen and (max-width: 768px) {
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .user-management, .draft-area, .points-display {
+            width: 90%;
+            margin: 10px auto;
+        }
+
+        /* Center the pop-up windows and make them scrollable */
+        #points-display, #goalie-points-display, #data-input-window, #goalie-data-input-window, #individual-rankings-display {
+            width: 95%; /* Make pop-ups take up more of the screen */
+            padding: 10px;
+            max-height: 90vh; /* Adjust max height for better fit */
+        }
+
+        /* Make tables horizontally scrollable */
+        .points-display table, .rankings-panel table {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap; /* Prevents text from wrapping inside cells */
+        }
+
+        #points-table, #goalie-points-table, #individual-rankings-table {
+            width: auto;
+            min-width: 100%; /* Ensures table is at least the full width of its container */
+        }
+
+        #points-table th, #points-table td, #goalie-points-table th, #goalie-points-table td, #individual-rankings-table th, #individual-rankings-table td {
+            text-align: center; /* Center table cell content for better readability */
+            padding: 5px; /* Reduce padding for smaller screens */
+        }
+
+        /* New rules to increase font size and input sizes for better visibility */
+        body {
+            font-size: 1.1em;
+        }
+        h2 {
+            font-size: 1.5em;
+        }
+        button, select, input[type="text"] {
+            font-size: 1.1em;
+            padding: 12px; /* Increase padding for easier tapping */
+        }
+        label {
+            width: auto;
+            margin-right: 10px;
+        }
+    }
+
+    /* Centering the points chart when a button is clicked */
+    .points-display.active {
+        display: block;
+        visibility: visible;
+        opacity: 1;
+        transition: opacity 0.3s ease;
+    }
+
+    .rankings-panel.active {
+        display: block;
+        visibility: visible;
+        opacity: 1;
+        transition: opacity 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+<div class="user-management">
+  <h2>User Management</h2>
+  <label for="user-select">Select User:</label>
+  <select id="user-select">
+    <option value="">-- Select User --</option>
+  </select>
+  <button id="add-user-button">Add User</button>
+  <button id="remove-user-button">Remove User</button>
+
+  <div id="add-user-form">
+    <h3>Add New User</h3>
+    <label for="first-name">First Name:</label>
+    <input type="text" id="first-name"><br>
+    <label for="last-name">Last Name:</label>
+    <input type="text" id="last-name"><br>
+    <button id="save-user-button">Save User</button>
+  </div>
+</div>
+
+<div class="draft-area">
+  <h2>Draft Players</h2>
+  <div id="player-draft-selections">
+
+  </div>
+  <button id="save-roster-button">Save Roster</button>
+</div>
+
+<div class="points-display" id="points-display">
+  <h2>Player Points</h2>
+  <table id="points-table">
+    <thead>
+    <tr>
+      <th>Name</th>
+      <th>Team</th>
+      <th>Points</th>
+    </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+  <div class="total-points" id="total-points">Total Points: </div>
+  <button class="return-button" id="close-points-button">Return</button>
+</div>
+
+<button id="user-points-button">User Points</button>
+
+<div id="data-input-window">
+  <h2>Paste Player Data</h2>
+  <p class="paste-instructions">
+    Please copy and paste your player data from Excel or another spreadsheet program into the table below.  Ensure the data is in the order: "Name", "Team", "Points".  You can use Ctrl+V (or Cmd+V on Mac) to paste.
+  </p>
+  <table id="data-input-table">
+    <tr>
+      <td><input type="text" /></td>
+      <td><input type="text" /></td>
+      <td><input type="text" /></td>
+    </tr>
+  </table>
+  <div class="button-container">
+    <button id="save-data-button">Save Changes</button>
+    <button id="clear-data-button">Clear Data</button>
+  </div>
+  <button class="return-button" id="close-input-window">Return</button>
+</div>
+
+<button id="open-goalie-data-input-button">Open Goalie Data Input</button>
+
+<div id="goalie-data-input-window" style="display: none;">
+  <h2>Paste Goalie Data</h2>
+  <p class="paste-instructions">
+  </p>
+  <table id="goalie-data-input-table">
+    <tr>
+      <td><input type="text" /></td>
+      <td><input type="text" /></td>
+      <td><input type="text" /></td>
+    </tr>
+  </table>
+  <div class="button-container">
+    <button id="save-goalie-data-button">Save Changes</button>
+    <button id="clear-goalie-data-button">Clear Data</button>
+  </div>
+  <button class="return-button" id="close-goalie-input-window">Return</button>
+</div>
+
+<div class="points-display" id="goalie-points-display" style="display: none;">
+  <h2>Goalie Points</h2>
+  <table id="goalie-points-table">
+    <thead>
+    <tr>
+      <th>Name</th>
+      <th>Team</th>
+      <th>Points</th>
+    </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+  <div class="total-points" id="total-goalie-points">Total Points: </div>
+  <button class="return-button" id="close-goalie-points-button">Return</button>
+</div>
+
+<button id="open-data-input-button">Open Data Input</button>
+
+<div id="individual-rankings-display" class="rankings-panel" style="display: none;">
+  <h2>Individual Rankings</h2>
+  <div class="rankings-table-container">
+    <table id="individual-rankings-table">
+      <thead>
+      <tr>
+        <th>Rank</th>
+        <th>User</th>
+        <th>Total Points</th>
+      </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+  <button id="close-individual-rankings-button" class="return-button">Close</button>
+</div>
+
+<button id="individual-rankings-button">Individual Rankings</button>
+
+
+<script>
+  const userSelect = document.getElementById('user-select');
+  const addUserButton = document.getElementById('add-user-button');
+  const removeUserButton = document.getElementById('remove-user-button');
+  const addUserForm = document.getElementById('add-user-form');
+  const saveUserButton = document.getElementById('save-user-button');
+  const firstNameInput = document.getElementById('first-name');
+  const lastNameInput = document.getElementById('last-name');
+  const playerDraftSelections = document.getElementById('player-draft-selections');
+  const saveRosterButton = document.getElementById('save-roster-button');
+  const userPointsButton = document.getElementById('user-points-button');
+  const pointsDisplay = document.getElementById('points-display');
+  const pointsTable = document.getElementById('points-table');
+  const closePointsButton = document.getElementById('close-points-button');
+  const totalPointsDisplay = document.getElementById('total-points');
+
+  const individualRankingsButton = document.getElementById('individual-rankings-button');
+  const individualRankingsDisplay = document.getElementById('individual-rankings-display');
+  const individualRankingsTable = document.getElementById('individual-rankings-table');
+  const closeIndividualRankingsButton = document.getElementById('close-individual-rankings-button');
+
+  const dataInputWindow = document.getElementById('data-input-window');
+  const openDataInputButton = document.getElementById('open-data-input-button');
+  const saveDataButton = document.getElementById('save-data-button');
+  const clearDataButton = document.getElementById('clear-data-button');
+  const dataInputTable = document.getElementById('data-input-table');
+  const closeInputWindowButton = document.getElementById('close-input-window');
+
+
+  let users = JSON.parse(localStorage.getItem('users')) || [];
+  let currentUser = null;
+  const localStorageKey = 'fantasyHockeyDraftData';
+  const rawDataKey = 'rawPlayerData';
+  const availableForwards = [
+      ["Connor McDavid (EDM)", "Kyle Connor (WPG)", "Mikko Rantanen (DAL)", "Mitch Marner (TOR)", "Nikita Kucherov (TB)"],
+      ["Alex Ovechkin (WAS)", "Jason Robertson (DAL)", "Leon Draisaitl (EDM)", "Nathan MacKinnon (COL)", "Sam Reinhart (FLA)"],
+      ["Jack Eichel (VEG)", "Jesper Bratt (NJ)", "Martin Necas (COL)", "Nick Suzuki (MON)", "Robert Thomas (STL)"],
+      ["Kirill Kaprizov (MIN)", "Mark Scheifele (WPG)", "Matt Duchene (DAL)", "Sebastian Aho (CAR)", "Tim Stutzle (OTT)"],
+      ["Aleksander Barkov (FLA)", "Auston Matthews (TOR)", "Brandon Hagel (TB)", "Jordan Kyrou (STL)", "Wyatt Johnston (DAL)"],
+      ["Adrian Kempe (LA)", "Brayden Point (TB)", "Cole Caufield (MON)", "Dylan Strome (WAS)", "Nikolaj Ehlers (WPG)"],
+      ["Anze Kopitar (LA)", "Mark Stone (VEG)", "Matt Boldy (MIN)", "Seth Jarvis (CAR)", "William Nylander (TOR)"],
+      ["Brady Tkachuk (OTT)", "Dylan Holloway (STL)", "Jake Guentzel (TB)", "Roope Hintz (DAL)", "Tomas Hertl (VEG)"],
+      ["Aliaksei Protas (WAS)", "Andrei Svechnikov (CAR)", "Brock Nelson (COL)", "Nico Hischier (NJ)", "Ryan Nugent-Hopkins (EDM)"],
+      ["Drake Batherson (OTT)", "John Tavares (TOR)", "Kevin Fiala (LA)", "Marco Rossi (MIN)", "Matthew Tkachuk (FLA)"],
+      ["Gabriel Vilardi (WPG)", "Mikael Granlund (DAL)", "Patrik Laine (MON)", "Pavel Buchnevich (STL)", "Tom Wilson (WAS)"],
+      ["Anthony Cirelli (TB)", "Brad Marchand (FLA)", "Ivan Barbashev (VEG)", "Mats Zuccarello (MIN)", "Pierre-Luc Dubois (WAS)"],
+      ["Connor McMichael (WAS)", "Jonathan Drouin (COL)", "Matthew Knies (TOR)", "Sam Bennett (FLA)", "Zach Hyman (EDM)"],
+      ["Claude Giroux (OTT)", "Joel Eriksson Ek (MIN)", "Quinton Byfield (LA)", "Taylor Hall (CAR)", "Timo Meier (NJ)"],
+      ["Carter Verhaeghe (FLA)", "Cole Perfetti (WPG)", "Dawson Mercer (NJ)", "Juraj Slafkovsky (MON)", "Valeri Nichushkin (COL)"],
+      ["Cale Makar (COL)", "Evan Bouchard (EDM)", "John Carlson (WAS)", "Shea Theodore (VEG)", "Victor Hedman (TB)"],
+      ["Jake Sanderson (OTT)", "Josh Morrissey (WPG)", "Lane Hutson (MON)", "Shayne Gostisbehere (CAR)", "Thomas Harley (DAL)"],
+      ["Aaron Ekblad (FLA)", "Cam Fowler (STL)", "Dougie Hamilton (NJ)", "Drew Doughty (LA)", "Morgan Rielly (TOR)"]
+  ];
+  const availableGoalies = [
+      ["Andrei Vasilevskiy (TB)", "Connor Hellebuyck (WPG)", "Jake Oettinger (DAL)", "Logan Thompson (WAS)", "Sergei Bobrovsky (FLA)"],
+      ["Adin Hill (VEG)", "Jordan Binnington (STL)", "Joseph Woll (TOR)", "Mackenzie Blackwood (COL)", "Pyotr Kochetkov (CAR)"],
+      ["Darcy Kuemper (LA)", "Filip Gustavsson (MIN)", "Linus Ullmark (OTT)", "Sam Montembeault (MON)", "Stuart Skinner (EDM)"]
+  ];
+
+  // Function to save data to local storage
+  function saveDataToLocalStorage() {
+      localStorage.setItem(localStorageKey, JSON.stringify(users));
+      const tableData = getTableData();
+      localStorage.setItem(rawDataKey, JSON.stringify(tableData));
+  }
+
+  // Function to load data from local storage
+  function loadDataFromLocalStorage() {
+      const storedData = localStorage.getItem(localStorageKey);
+      if (storedData) {
+          users = JSON.parse(storedData);
+          populateUserDropdown();
+      }
+      const rawData = localStorage.getItem(rawDataKey);
+      if (rawData) {
+          try {
+              const parsedData = JSON.parse(rawData);
+              populateTable(parsedData);
+          } catch (e) {
+              console.error("Error parsing stored table data:", e);
+              dataInputTable.innerHTML = `<tr><th>Name</th><th>Team</th><th>Points</th></tr>
+                                          <td><input type="text" /></td>
+                                          <td><input type="text" /></td>
+                                          <td><input type="text" /></td>
+                                      </tr>`;
+          }
+      }
+  }
+
+  // Function to populate the user dropdown
+  function populateUserDropdown() {
+      userSelect.innerHTML = '<option value="">-- Select User --</option>';
+      users.forEach(user => {
+          const option = document.createElement('option');
+          option.value = user.id;
+          option.textContent = `${user.firstName} ${user.lastName}`;
+          userSelect.appendChild(option);
+      });
+  }
+
+  // Function to generate player selection dropdowns and pre-select saved players
+function generatePlayerDropdowns() {
+    playerDraftSelections.innerHTML = '';
+    if (currentUser) {
+        for (let i = 0; i < 18; i++) {
+            const playerDiv = document.createElement('div');
+            playerDiv.classList.add('player-selection');
+            const playerLabel = document.createElement('label');
+            playerLabel.textContent = `Player ${i + 1}:`;
+            const playerSelect = document.createElement('select');
+            playerSelect.name = `forward-${i}`;
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            defaultOption.textContent = "-- Select Player --";
+            playerSelect.appendChild(defaultOption);
+            availableForwards[i].forEach(player => {
+                const option = document.createElement('option');
+                option.value = player;
+                option.textContent = player;
+                option.selected = currentUser.roster.forwards[i] === player;
+                playerSelect.appendChild(option);
+            });
+            playerDiv.appendChild(playerLabel);
+            playerDiv.appendChild(playerSelect);
+            playerDraftSelections.appendChild(playerDiv);
+        }
+
+        for (let i = 0; i < 3; i++) {
+            const goalieDiv = document.createElement('div');
+            goalieDiv.classList.add('player-selection');
+            const goalieLabel = document.createElement('label');
+            goalieLabel.textContent = `Goalie ${i + 1}:`;
+            const goalieSelect = document.createElement('select');
+            goalieSelect.name = `goalie-${i}`;
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            defaultOption.textContent = "-- Select Goalie --";
+            goalieSelect.appendChild(defaultOption);
+            availableGoalies[i].forEach(player => {
+                const option = document.createElement('option');
+                option.value = player;
+                option.textContent = player;
+                option.selected = currentUser.roster.goalies[i] === player;
+                goalieSelect.appendChild(option);
+            });
+            goalieDiv.appendChild(goalieLabel);
+            goalieDiv.appendChild(goalieSelect);
+            playerDraftSelections.appendChild(goalieDiv);
+        }
+    }
+}
+
+  // Event listener for the "Add User" button
+  addUserButton.addEventListener('click', () => {
+      addUserForm.style.display = 'block';
+  });
+
+  // Event listener for the "Save User" button
+  saveUserButton.addEventListener('click', () => {
+      const firstName = firstNameInput.value.trim();
+      const lastName = lastNameInput.value.trim();
+      if (firstName && lastName) {
+          const newUser = {
+              id: Date.now(),
+              firstName: firstName,
+              lastName: lastName,
+              roster: { forwards: Array(18).fill(""), goalies: Array(3).fill("") }
+          };
+          users.push(newUser);
+          populateUserDropdown();
+          saveDataToLocalStorage();
+          addUserForm.style.display = 'none';
+          firstNameInput.value = '';
+          lastNameInput.value = '';
+      } else {
+          alert('Please enter both first and last names.');
+      }
+  });
+
+  // Event listener for user selection
+  userSelect.addEventListener('change', () => {
+      const selectedUserId = userSelect.value;
+      currentUser = users.find(user => user.id === parseInt(selectedUserId));
+      if (currentUser) {
+          generatePlayerDropdowns();
+      } else {
+          playerDraftSelections.innerHTML = '';
+      }
+  });
+
+  // Event listener for the "Save Roster" button
+  saveRosterButton.addEventListener('click', () => {
+      if (!currentUser) {
+          alert('Please select a user first.');
+          return;
+      }
+
+      const forwardSelections = [];
+      const goalieSelections = [];
+
+      for (let i = 0; i < 18; i++) {
+          const selectElement = playerDraftSelections.querySelector(`select[name="forward-${i}"]`);
+          if (selectElement) {
+              forwardSelections.push(selectElement.value);
+          } else {
+              forwardSelections.push("");
+          }
+      }
+
+      for (let i = 0; i < 3; i++) {
+          const selectElement = playerDraftSelections.querySelector(`select[name="goalie-${i}"]`);
+          if (selectElement) {
+              goalieSelections.push(selectElement.value);
+          } else {
+              goalieSelections.push("");
+          }
+      }
+
+      if (forwardSelections.filter(v => v).length === 18 && goalieSelections.filter(v => v).length === 3) {
+          currentUser.roster.forwards = forwardSelections;
+          currentUser.roster.goalies = goalieSelections;
+          saveDataToLocalStorage();
+          alert(`Roster saved for ${currentUser.firstName} ${currentUser.lastName}!`);
+      } else {
+          alert('Please select 18 players and 3 goalies.');
+      }
+  });
+
+  // Event listener for the "User Points" button
+  userPointsButton.addEventListener('click', () => {
+    if (!currentUser) {
+        alert('Please select a user to view their roster and points.');
+        return;
+    }
+
+    const playerData = getTableData(); // Get the player data from the table
+    const goalieData = getGoalieTableData(); // Get the goalie data
+    pointsTable.querySelector('tbody').innerHTML = ''; // Clear the table body
+    let totalPoints = 0;
+
+    // Create a map for quick lookup of player points
+    const playerPointsMap = new Map();
+    if (playerData.length > 1) { // Ensure there's data beyond the header
+        for (let i = 1; i < playerData.length; i++) {
+            if (playerData[i].length === 3) {
+                const playerName = playerData[i][0];
+                const playerPoints = parseInt(playerData[i][2]);
+                if(!isNaN(playerPoints)){
+                   playerPointsMap.set(playerName, playerPoints);
+                }
+            }
+        }
+    }
+
+
+    // Create a map for quick lookup of goalie points
+    const goaliePointsMap = new Map();
+     if (goalieData.length > 0) {
+        for (let i = 0; i < goalieData.length; i++) {
+            const goalieName = goalieData[i][0];
+            const wins = parseInt(goalieData[i][2]) || 0;
+            const shutouts = parseInt(goalieData[i][3]) || 0;
+            const basePoints = parseInt(goalieData[i][4]) || 0;
+            const goaliePoints = wins + (shutouts * 2) + basePoints;
+            goaliePointsMap.set(goalieName, goaliePoints);
+        }
+    }
+
+
+    // Clear any existing content in the table.  Keep the headers.
+    pointsTable.innerHTML = `
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Team</th>
+                <th>Points</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    `;
+    const tbody = pointsTable.querySelector('tbody');
+
+    // Function to add a row to the table
+    function addPlayerRow(playerName, playerTeam, points) {
+        const row = tbody.insertRow();
+        const nameCell = row.insertCell();
+        nameCell.textContent = playerName;
+        const teamCell = row.insertCell();
+        teamCell.textContent = playerTeam;
+        const pointsCell = row.insertCell();
+        pointsCell.textContent = points;
+    }
+
+    // Display forwards
+    currentUser.roster.forwards.forEach(forward => {
+        if (forward) {
+            const playerName = forward.substring(0, forward.lastIndexOf('(')-1);
+            const playerTeam = forward.substring(forward.lastIndexOf('(') + 1, forward.lastIndexOf(')'));
+            const points = playerPointsMap.get(playerName) || 0; // Default to 0 if not found
+            addPlayerRow(playerName, playerTeam, points);
+            totalPoints += points;
+        }
+    });
+
+    // Display goalies
+    currentUser.roster.goalies.forEach(goalie => {
+        if (goalie) {
+            const goalieName = goalie.substring(0, goalie.lastIndexOf('(') - 1);
+            const goalieTeam = goalie.substring(goalie.lastIndexOf('(') + 1, goalie.lastIndexOf(')'));
+            const points = goaliePointsMap.get(goalieName) || 0;
+            addPlayerRow(goalieName, goalieTeam, points);
+            totalPoints += points;
+        }
+    });
+
+    totalPointsDisplay.textContent = `Total Points: ${totalPoints}`;
+    pointsDisplay.style.display = 'block';
+
+});
+
+  // Event listener for the close button in the points display
+  closePointsButton.addEventListener('click', () => {
+      pointsDisplay.style.display = 'none';
+  });
+
+  // Event listener for the open data input button
+  openDataInputButton.addEventListener('click', () => {
+      dataInputWindow.style.display = 'block';
+  });
+
+  // Event listener for the close data input window
+  closeInputWindowButton.addEventListener('click', () => {
+      dataInputWindow.style.display = 'none';
+  });
+
+  // Function to get the data from the table
+  function getTableData() {
+      const data = [];
+      const rows = dataInputTable.rows;
+      for (let i = 0; i < rows.length; i++) {
+          const rowData = [];const cells = rows[i].cells;
+          for (let j = 0; j < cells.length; j++) {
+              const inputElement = cells[j].querySelector('input');
+              rowData.push(inputElement ? inputElement.value.trim() : cells[j].textContent.trim());
+          }
+          data.push(rowData);
+      }
+      return data;
+  }
+
+  // Function to populate the table with data
+function populateTable(data) {
+    dataInputTable.innerHTML = ''; // Clear the entire table
+    // Add the header row
+    const headerRow = dataInputTable.insertRow();
+    headerRow.insertCell().textContent = 'Name';
+    headerRow.insertCell().textContent = 'Team';
+    headerRow.insertCell().textContent = 'Points';
+
+    if (data && data.length > 1) { // Start from index 1 to skip header row in pasted data
+        for (let i = 1; i < data.length; i++) {
+            const rowData = data[i];
+            if (rowData.length === 3) {
+                const newRow = dataInputTable.insertRow();
+                for (let j = 0; j < rowData.length; j++) {
+                    const newCell = newRow.insertCell();
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = rowData[j];
+                    newCell.appendChild(input);
+                }
+            }  else if (rowData.length > 0) {
+                 const newRow = dataInputTable.insertRow();
+                  for (let j = 0; j < rowData.length; j++) {
+                    const newCell = newRow.insertCell();
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = rowData[j];
+                    newCell.appendChild(input);
+                }
+                for(let k = rowData.length; k < 3; k++){
+                     const newCell = newRow.insertCell();
+                      const input = document.createElement('input');
+                      input.type = 'text';
+                      newCell.appendChild(input);
+                }
+
+            }else {
+                const newRow = dataInputTable.insertRow();
+                newRow.insertCell().appendChild(document.createElement('input'));
+                newRow.insertCell().appendChild(document.createElement('input'));
+                newRow.insertCell().appendChild(document.createElement('input'));
+            }
+        }
+    } else {
+        // Ensure at least one empty row is present
+        const newRow = dataInputTable.insertRow();
+        newRow.insertCell().appendChild(document.createElement('input'));
+        newRow.insertCell().appendChild(document.createElement('input'));
+        newRow.insertCell().appendChild(document.createElement('input'));
+    }
+}
+
+
+  // Event listener for the save data button
+  saveDataButton.addEventListener('click', () => {
+      const tableData = getTableData();
+       if (tableData.length > 0 && tableData[0].length === 3 && tableData[0][0] === "Name" && tableData[0][1] === "Team" && tableData[0][2] === "Points") {
+          let hasErrors = false;
+          for (let i = 1; i < tableData.length; i++) {
+              if (tableData[i].length !== 3) {
+                  alert(`Invalid data format on row ${i + 1}. Expected 3 values.`);
+                  hasErrors = true;
+                  return;
+              }
+              const points = parseInt(tableData[i][2]);
+              if (isNaN(points)) {
+                  alert(`Invalid points value on row ${i + 1}. Points must be a number.`);
+                  hasErrors = true;
+                  return;
+              }
+          }
+          if (!hasErrors) {
+              saveDataToLocalStorage();
+              alert('Data saved successfully!');
+              dataInputWindow.style.display = 'none';
+              if (currentUser) {
+                  pointsTable.querySelector('tbody').innerHTML = '';
+                  let totalPoints = 0;
+                  for (let i = 1; i < tableData.length; i++) {
+                      const row = pointsTable.insertRow();
+                      const nameCell = row.insertCell();
+                      const teamCell = row.insertCell();
+                      const pointsCell = row.insertCell();
+                      nameCell.textContent = tableData[i][0];
+                      teamCell.textContent = tableData[i][1];
+                      pointsCell.textContent = tableData[i][2];
+                      totalPoints += parseInt(tableData[i][2]);
+                  }
+                  totalPointsDisplay.textContent = `Total Points: ${totalPoints}`;
+              }
+          }
+      } else {
+          alert('Invalid data format. Please use the format: Name  Team  Points');
+          return;
+      }
+  });
+
+  // Event listener for the clear data button
+  clearDataButton.addEventListener('click', () => {
+      dataInputTable.innerHTML = `<tr><th>Name</th><th>Team</th><th>Points</th></tr>
+                                  <tr>
+                                      <td><input type="text" /></td>
+                                      <td><input type="text" /></td>
+                                      <td><input type="text" /></td>
+                                  </tr>`;
+      localStorage.removeItem(rawDataKey);
+      alert('Data cleared!');
+  });
+
+  // Handle paste event in the table
+  dataInputTable.addEventListener('paste', function(event) {
+      event.preventDefault();
+      let pasteData = event.clipboardData.getData('text');
+      pasteData = pasteData.trim();
+      let rows = pasteData.split('\n');
+      let tableRows = dataInputTable.rows;
+
+      let minRows = Math.min(rows.length, tableRows.length);
+
+      for (let i = 0; i < minRows; i++) {
+          let row = rows[i].split('\t');
+          let tableCells = tableRows[i].cells;
+          let minCells = Math.min(row.length, tableCells.length);
+
+          for (let j = 0; j < minCells; j++) {
+              const inputElement = tableCells[j].querySelector('input');
+              if (inputElement) {
+                  inputElement.value = row[j].trim();
+              } else {
+                  tableCells[j].textContent = row[j].trim();
+              }
+          }
+      }
+
+      // Add more rows if pasted data has more rows than the table
+      if (rows.length > tableRows.length) {
+          for (let i = tableRows.length; i < rows.length; i++) {
+              let newRow = dataInputTable.insertRow();
+              let rowData = rows[i].split('\t');
+              for (let j = 0; j < rowData.length; j++) {
+                  let newCell = newRow.insertCell();
+                  const input = document.createElement('input');
+                  input.type = 'text';
+                  input.value = rowData[j].trim();
+                  newCell.appendChild(input);
+              }
+              // Fill remaining cells with empty input fields if rowData is shorter
+              for (let j = rowData.length; j < 3; j++) {
+                  let newCell = newRow.insertCell();
+                  const input = document.createElement('input');
+                  input.type = 'text';
+                  newCell.appendChild(input);
+              }
+          }
+      }
+  });
+
+
+  // Load data from local storage when the page loads
+  loadDataFromLocalStorage();
+
+
+
+
+
+// Get references to the goalie-related elements
+const openGoalieDataInputButton = document.getElementById('open-goalie-data-input-button');
+const goalieDataInputWindow = document.getElementById('goalie-data-input-window');
+const saveGoalieDataButton = document.getElementById('save-goalie-data-button');
+const clearGoalieDataButton = document.getElementById('clear-goalie-data-button');
+const goalieDataTable = document.getElementById('goalie-data-input-table');
+const closeGoalieInputWindowButton = document.getElementById('close-goalie-input-window');
+const goaliePointsDisplay = document.getElementById('goalie-points-display');
+const goaliePointsTable = document.getElementById('goalie-points-table');
+const totalGoaliePointsDisplay = document.getElementById('total-goalie-points');
+const closeGoaliePointsButton = document.getElementById('close-goalie-points-button');
+
+const rawGoalieDataKey = 'rawGoalieData'; // Key for local storage
+
+// Load goalie data from local storage
+function loadGoalieDataFromLocalStorage() {
+    const storedData = localStorage.getItem(rawGoalieDataKey);
+    if (storedData) {
+        try {
+            const parsedData = JSON.parse(storedData);
+            populateGoalieTable(parsedData);
+        } catch (error) {
+            console.error('Error parsing goalie data:', error);
+            // Initialize table with an empty row if loading fails
+            goalieDataTable.innerHTML = '';
+            populateGoalieTable([['', '', '', '', '']]);
+        }
+    } else {
+        // Initialize table with an empty row if no data in local storage
+        populateGoalieTable([['', '', '', '', '']]);
+    }
+}
+
+// Save goalie data to local storage
+function saveGoalieDataToLocalStorage() {
+    const tableData = getGoalieTableData();
+    localStorage.setItem(rawGoalieDataKey, JSON.stringify(tableData));
+}
+
+// Get goalie data from the table
+function getGoalieTableData() {
+    const data = [];
+    const rows = goalieDataTable.rows;
+    if (rows.length > 1) {
+        for (let i = 1; i < rows.length; i++) {
+            const rowData = [];
+            const cells = rows[i].cells;
+            if (cells.length > 0) {
+                for (let j = 0; j < cells.length; j++) {
+                    const inputElement = cells[j].querySelector('input');
+                    rowData.push(inputElement ? inputElement.value.trim() : '');
+                }
+            }
+            data.push(rowData);
+        }
+    }
+    return data;
+}
+
+// Function to populate the table with data
+function populateGoalieTable(data) {
+    goalieDataTable.innerHTML = ''; // Clear the entire table *before* adding rows
+
+    // Add the header row.
+    const headerRow = goalieDataTable.insertRow();
+    headerRow.insertCell().textContent = 'Name';
+    headerRow.insertCell().textContent = 'Team';
+    headerRow.insertCell().textContent = 'Wins';
+    headerRow.insertCell().textContent = 'Shutouts';
+    headerRow.insertCell().textContent = 'Points';
+
+    // Add the data rows.
+    if (data && data.length > 0) {
+        data.forEach(rowData => {
+            const newRow = goalieDataTable.insertRow();
+            for (let j = 0; j < 5; j++) {
+                const newCell = newRow.insertCell();
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = rowData[j] || '';
+                newCell.appendChild(input);
+            }
+        });
+    } else {
+        // Ensure at least one empty data row is present after the header.  This is important for an empty table.
+        const newRow = goalieDataTable.insertRow();
+        for (let i = 0; i < 5; i++) {
+            const newCell = newRow.insertCell();
+            const input = document.createElement('input');
+            input.type = 'text';
+            newCell.appendChild(input);
+        }
+    }
+}
+
+
+// Event listener for the save data button
+saveGoalieDataButton.addEventListener('click', () => {
+    const tableData = getGoalieTableData();
+    let hasErrors = false;
+
+    for (let i = 0; i < tableData.length; i++) {
+        if (tableData[i].length !== 5) {
+            alert(`Invalid data format on row ${i + 1}. Expected 5 values.  Row will be ignored.`);
+            hasErrors = true;
+            continue; // Skip to the next row
+        }
+        const wins = parseInt(tableData[i][2]);
+        const shutouts = parseInt(tableData[i][3]);
+        const points = parseInt(tableData[i][4]);
+        if (isNaN(wins) || isNaN(shutouts) || isNaN(points)) {
+            alert(`Invalid data value on row ${i + 1}. Wins, Shutouts, and Points must be numbers.  Row will be ignored.`);
+            hasErrors = true;
+            continue; // Skip to the next row
+        }
+    }
+    if (!hasErrors) {
+        saveGoalieDataToLocalStorage();
+        alert('Data saved successfully!');
+        goalieDataInputWindow.style.display = 'none';
+    }
+});
+
+// Event listener for the clear data button
+clearGoalieDataButton.addEventListener('click', () => {
+    goalieDataTable.innerHTML = ''; // Clear the entire table
+    populateGoalieTable([['', '', '', '', '']]); // Add header and one empty row
+    localStorage.removeItem(rawGoalieDataKey);
+    alert('Data cleared!');
+});
+
+// Handle paste event in the table
+goalieDataTable.addEventListener('paste', function (event) {
+    event.preventDefault();
+    let pasteData = event.clipboardData.getData('text');
+    pasteData = pasteData.trim();
+    let rows = pasteData.split('\n');
+    let tableRows = goalieDataTable.rows;
+
+    // Ensure the table has the correct header row
+    if (tableRows.length === 0) {
+        goalieDataTable.insertRow().innerHTML = '<tr><th>Name</th><th>Team</th><th>Wins</th><th>Shutouts</th><th>Points</th></tr>';
+    }
+
+
+    let minRows = Math.min(rows.length, tableRows.length - 1); // Changed to -1 to account for header
+
+    for (let i = 0; i < minRows; i++) {
+        let row = rows[i].split('\t');
+        let tableCells = tableRows[i + 1].cells; // Changed to i+1
+        let minCells = Math.min(row.length, tableCells.length);
+
+        for (let j = 0; j < minCells; j++) {
+            const inputElement = tableCells[j].querySelector('input');
+            if (inputElement) {
+                inputElement.value = row[j].trim();
+            } else {
+                tableCells[j].textContent = row[j].trim();
+            }
+        }
+    }
+
+    // Add more rows if pasted data has more rows than the table
+    if (rows.length > tableRows.length - 1) { // changed to -1
+        for (let i = tableRows.length - 1; i < rows.length; i++) { // changed to -1
+            let newRow = goalieDataTable.insertRow();
+            let rowData = rows[i].split('\t');
+            for (let j = 0; j < rowData.length; j++) {
+                let newCell = newRow.insertCell();
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = rowData[j].trim();
+                newCell.appendChild(input);
+            }
+            // Fill remaining cells with empty input fields if rowData is shorter
+            for (let j = rowData.length; j < 5; j++) {
+                let newCell = newRow.insertCell();
+                const input = document.createElement('input');
+                input.type = 'text';
+                newCell.appendChild(input);
+            }
+        }
+    }
+});
+
+
+// Load data from local storage when the page loads
+loadGoalieDataFromLocalStorage();
+
+//open goalie data input
+openGoalieDataInputButton.addEventListener('click', () => {
+    goalieDataInputWindow.style.display = 'block';
+    loadGoalieDataFromLocalStorage();
+
+});
+
+//close goalie data input
+closeGoalieInputWindowButton.addEventListener('click', () => {
+    goalieDataInputWindow.style.display = 'none';
+});
+
+//close goalie points display
+closeGoaliePointsButton.addEventListener('click', () => {
+    goaliePointsDisplay.style.display = 'none';
+});
+
+
+
+
+
+// Function to get all users and their total points (CORRECTED)
+function getAllUsersWithTotalPoints() {
+    const usersWithPoints = [];
+    const playerData = getTableData(); // Get player data
+    const goalieData = getGoalieTableData(); // Get goalie data
+
+    const playerPointsMap = new Map();
+    if (playerData.length > 1) {
+        for (let i = 1; i < playerData.length; i++) {
+            if (playerData[i].length === 3) {
+                const playerName = playerData[i][0];
+                const playerPoints = parseInt(playerData[i][2]);
+                if (!isNaN(playerPoints)) {
+                    playerPointsMap.set(playerName, playerPoints);
+                }
+            }
+        }
+    }
+
+    const goaliePointsMap = new Map();
+    if (goalieData.length > 0) {
+        for (let i = 0; i < goalieData.length; i++) {
+            const goalieName = goalieData[i][0];
+            const wins = parseInt(goalieData[i][2]) || 0;
+            const shutouts = parseInt(goalieData[i][3]) || 0;
+            const basePoints = parseInt(goalieData[i][4]) || 0;
+            const goaliePoints = wins + (shutouts * 2) + basePoints;
+            goaliePointsMap.set(goalieName, goaliePoints);
+        }
+    }
+
+    for (const user of users) {
+        let totalPoints = 0;
+        if (user.roster) {
+            if (user.roster.forwards) {
+                user.roster.forwards.forEach(forward => {
+                    if (forward) {
+                        const playerName = forward.substring(0, forward.lastIndexOf('(') - 1);
+                        totalPoints += playerPointsMap.get(playerName) || 0;
+                    }
+                });
+            }
+            if (user.roster.goalies) {
+                user.roster.goalies.forEach(goalie => {
+                    if (goalie) {
+                        const goalieName = goalie.substring(0, goalie.lastIndexOf('(') - 1);
+                        totalPoints += goaliePointsMap.get(goalieName) || 0;
+                    }
+                });
+            }
+        }
+        usersWithPoints.push({
+            name: `${user.firstName} ${user.lastName}`,
+            totalPoints: totalPoints
+        });
+    }
+    return usersWithPoints;
+}
+
+// Function to get rank string (1st, 2nd, 3rd, etc.)
+function getRankString(rank) {
+    if (rank === 1) return '1st';
+    if (rank === 2) return '2nd';
+    if (rank === 3) return '3rd';
+    return rank + 'th';
+}
+
+// Event Listener for Individual Rankings Button (CORRECTED)
+individualRankingsButton.addEventListener('click', () => {
+    // Clear the table body
+    const tbody = individualRankingsTable.querySelector('tbody');
+    if (tbody) {
+        tbody.innerHTML = '';
+    } else {
+        console.error("<tbody> element not found in individualRankingsTable.");
+        return;
+    }
+
+    // Get all users and their total points using the corrected function
+    const usersWithPoints = getAllUsersWithTotalPoints();
+
+    // Sort the users by total points in descending order
+    usersWithPoints.sort((a, b) => b.totalPoints - a.totalPoints);
+
+    // Populate the table with user data
+    usersWithPoints.forEach((user, index) => {
+        const row = tbody.insertRow();
+        row.insertCell().textContent = getRankString(index + 1);
+        row.insertCell().textContent = user.name;
+        row.insertCell().textContent = user.totalPoints;
+    });
+
+    // Show the display
+    individualRankingsDisplay.style.display = 'block';
+});
+
+// Event Listener for Close Individual Rankings Button
+closeIndividualRankingsButton.addEventListener('click', () => {
+    individualRankingsDisplay.style.display = 'none';
+});
+
+// Ensure these elements exist in your HTML
+if (!individualRankingsButton || !individualRankingsDisplay || !individualRankingsTable || !closeIndividualRankingsButton) {
+    console.error("One or more Individual Rankings elements not found in the DOM.");
+}
+
+
+
+removeUserButton.addEventListener('click', () => {
+    const selectedUserId = userSelect.value;
+    const selectedOption = userSelect.options[userSelect.selectedIndex];
+
+    if (!selectedUserId) {
+        alert('Please select a user to remove.');
+        return;
+    }
+
+    // **Correction: Ensure consistent type comparison (converting to string)**
+    const userToRemove = users.find(user => String(user.id) === selectedUserId);
+
+    if (!userToRemove) {
+        alert('User not found.');
+        return;
+    }
+
+    const confirmation = confirm(`Are you sure you want to remove ${userToRemove.firstName} ${userToRemove.lastName}?`);
+    if (!confirmation) {
+        return; // User cancelled the removal
+    }
+
+    // Remove the user from the users array
+    users = users.filter(user => String(user.id) !== selectedUserId);
+    saveDataToLocalStorage();
+
+    // Remove the selected option from the dropdown
+    userSelect.removeChild(selectedOption);
+
+    alert(`User ${userToRemove.firstName} ${userToRemove.lastName} removed successfully!`);
+});
+
+
+
+
+</script>
+</body>
+</html>

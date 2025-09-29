@@ -1,1266 +1,678 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Fantasy Hockey Draft</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy Hockey Draft - Team Roster Entry</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* General body and font styles */
-    body {
-        font-family: 'Inter', sans-serif;
-        background-color: #f0f4f8; /* Light, clean background */
-        color: #334e68; /* Dark, readable text */
-        margin: 0;
-        padding: 20px;
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
+    body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
 
-    /* Card-like container styling */
-    .user-management, .draft-area, .points-display, .rankings-panel {
-        background-color: #ffffff;
-        margin-bottom: 20px;
-        padding: 20px;
-        border-radius: 12px; /* Smoothed corners */
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Soft shadow for depth */
-        box-sizing: border-box;
-        width: 100%;
-        max-width: 768px; /* Constrain max width for desktop */
-    }
+    /* Z-INDEX FIX: Ensure the modal is always on top (over the loading screen/form) */
+    #custom-modal-backdrop { z-index: 1000; }
+    #custom-modal { z-index: 1010; }
 
-    h2 {
-        font-weight: 700;
-        color: #1a202c;
-        margin-top: 0;
-        margin-bottom: 15px;
+    .loading-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(255, 255, 255, 0.95); display: flex; justify-content: center;
+        align-items: center; z-index: 99; flex-direction: column; /* Lower than modal */
     }
-
-    label {
-        display: inline-block;
-        margin-bottom: 5px;
-        font-weight: 600;
-    }
-
-    select, input[type="text"], button {
-        padding: 12px;
-        margin-bottom: 12px;
-        border: 1px solid #d1d9e6;
-        border-radius: 8px;
-        box-sizing: border-box;
-        font-size: 16px;
-    }
-
-    #add-user-form {
-        display: none;
-        margin-top: 20px;
-        padding-top: 15px;
-        border-top: 1px solid #e2e8f0;
-    }
-
-    .player-selection {
-        display: flex;
-        align-items: center;
-        margin-bottom: 15px;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-
-    .player-selection label {
-        flex-grow: 1;
-        min-width: 100px;
-    }
-
-    .player-selection select {
-        flex-grow: 2;
-        min-width: 150px;
-    }
-
-    .draft-area select {
-        width: 100%;
-    }
-
-    /* Pop-up window styling */
-    #points-display, #goalie-points-display, #data-input-window, #goalie-data-input-window, #individual-rankings-display {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: #ffffff;
-        padding: 25px;
-        border-radius: 12px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-        z-index: 10;
-        max-height: 90vh;
-        overflow-y: auto;
-        width: 95%;
-        max-width: 700px;
-        text-align: center;
-    }
-
-    .close-button {
+    .roster-locked .select-wrapper::after {
+        content: 'LOCKED';
         position: absolute;
-        top: 15px;
-        right: 15px;
-        cursor: pointer;
-        font-size: 24px;
-        color: #888;
-        transition: color 0.2s;
+        top: 50%;
+        right: 1rem;
+        transform: translateY(-50%);
+        padding: 2px 8px;
+        background-color: #fca5a5; /* Red-300 */
+        color: #7f1d1d; /* Red-900 */
+        font-size: 0.75rem;
+        font-weight: bold;
+        border-radius: 4px;
     }
-
-    .close-button:hover {
-        color: #333;
-    }
-
-    .total-points {
-        font-weight: 700;
-        font-size: 1.5em;
-        margin-top: 20px;
-        color: #1a202c;
-    }
-
-    /* Table styling */
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-    }
-
-    th, td {
-        border: 1px solid #e2e8f0;
-        padding: 12px;
-        text-align: left;
-    }
-
-    th {
-        background-color: #f0f4f8;
+    /* Style for disabled select in locked mode */
+    .roster-locked select:disabled {
+        background-color: #eef2ff; /* Indigo-50 for a clean locked look */
+        color: #1e3a8a; /* Blue-900 */
         font-weight: 600;
-        color: #334e68;
-    }
-
-    #data-input-window textarea, #goalie-data-input-window textarea {
-        width: 100%;
-        height: 150px;
-        box-sizing: border-box;
-        margin-bottom: 15px;
-        border: 1px solid #d1d9e6;
-        border-radius: 8px;
-        padding: 10px;
-        font-family: monospace;
-        resize: vertical;
-    }
-
-    .button-container {
-        display: flex;
-        justify-content: space-around;
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    .button-container button, .return-button, #user-points-button, #open-goalie-data-input-button, #open-data-input-button, #individual-rankings-button {
-        padding: 15px 25px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: 600;
-        color: #fff;
-        transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Primary button color */
-    #save-user-button, #save-roster-button, #save-data-button, #save-goalie-data-button, .return-button, #user-points-button, #open-goalie-data-input-button, #open-data-input-button, #individual-rankings-button {
-        background-color: #4a90e2; /* Calming blue */
-    }
-    #save-user-button:hover, #save-roster-button:hover, #save-data-button:hover, #save-goalie-data-button:hover, .return-button:hover, #user-points-button:hover, #open-goalie-data-input-button:hover, #open-data-input-button:hover, #individual-rankings-button:hover {
-        background-color: #357bd9;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-    }
-
-    /* Danger button color */
-    #remove-user-button, #clear-data-button, #clear-goalie-data-button {
-        background-color: #e74c3c; /* A strong red */
-    }
-    #remove-user-button:hover, #clear-data-button:hover, #clear-goalie-data-button:hover {
-        background-color: #c0392b;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-    }
-
-    #data-input-table td input {
-        width: 100%;
-        padding: 0;
-        border: none;
-        font-size: 1em;
-        box-sizing: border-box;
-        background-color: transparent;
-    }
-
-    #data-input-table td input:focus {
-        outline: none;
-        background-color: #f0f4f8;
-    }
-
-    .paste-instructions {
-        font-size: 0.9em;
-        color: #555;
-        margin-bottom: 10px;
-    }
-
-    .return-button {
-        margin-top: 20px;
-    }
-
-    /* Media query for mobile phones */
-    @media screen and (max-width: 768px) {
-        body {
-            padding: 10px;
-            font-size: 1.1em;
-        }
-
-        .user-management, .draft-area, .points-display, .rankings-panel {
-            width: 100%;
-            margin: 10px auto;
-        }
-
-        button, select, input[type="text"] {
-            font-size: 1em;
-            padding: 12px;
-            width: 100%; /* Full width on mobile */
-        }
-
-        label {
-            width: 100%;
-            margin-bottom: 5px;
-        }
-
-        .player-selection {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 5px;
-        }
-        .player-selection label, .player-selection select {
-            width: 100%;
-        }
-
-        #points-display, #goalie-points-display, #data-input-window, #goalie-data-input-window, #individual-rankings-display {
-            width: 98%;
-            padding: 15px;
-            max-height: 95vh;
-        }
-
-        /* Make tables horizontally scrollable */
-        .points-display table, .rankings-panel table {
-            display: block;
-            overflow-x: auto;
-            white-space: nowrap;
-        }
-
-        th, td {
-            text-align: center;
-            padding: 8px;
-        }
+        border-color: #a5b4fc; /* Indigo-300 */
+        opacity: 1; /* Override default opacity for disabled elements */
+        cursor: default;
     }
   </style>
-</head>
-<body>
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-<div class="user-management">
-  <h2>User Management</h2>
-  <label for="user-select">Select User:</label>
-  <select id="user-select">
-    <option value="">-- Select User --</option>
-  </select>
-  <button id="add-user-button">Add User</button>
-  <button id="remove-user-button">Remove User</button>
+    // --- GLOBAL STATE & FIREBASE SETUP ---
+    let db = null;
+    let auth = null;
+    let currentUserId = null;
+    window.users = [];
 
-  <div id="add-user-form">
-    <h3>Add New User</h3>
-    <label for="first-name">First Name:</label>
-    <input type="text" id="first-name"><br>
-    <label for="last-name">Last Name:</label>
-    <input type="text" id="last-name"><br>
-    <button id="save-user-button">Save User</button>
-  </div>
-</div>
-
-<div class="draft-area">
-  <h2>Draft Players</h2>
-  <div id="player-draft-selections">
-  </div>
-  <button id="save-roster-button">Save Roster</button>
-</div>
-
-<div class="points-display" id="points-display">
-  <h2>Player Points</h2>
-  <table id="points-table">
-    <thead>
-    <tr>
-      <th>Name</th>
-      <th>Team</th>
-      <th>Points</th>
-    </tr>
-    </thead>
-    <tbody>
-    </tbody>
-  </table>
-  <div class="total-points" id="total-points">Total Points: </div>
-  <button class="return-button" id="close-points-button">Return</button>
-</div>
-
-<button id="user-points-button">User Points</button>
-
-<div id="data-input-window">
-  <h2>Paste Player Data</h2>
-  <p class="paste-instructions">
-    Please copy and paste your player data from Excel or another spreadsheet program into the table below.  Ensure the data is in the order: "Name", "Team", "Points".  You can use Ctrl+V (or Cmd+V on Mac) to paste.
-  </p>
-  <table id="data-input-table">
-    <tr>
-      <td><input type="text" /></td>
-      <td><input type="text" /></td>
-      <td><input type="text" /></td>
-    </tr>
-  </table>
-  <div class="button-container">
-    <button id="save-data-button">Save Changes</button>
-    <button id="clear-data-button">Clear Data</button>
-  </div>
-  <button class="return-button" id="close-input-window">Return</button>
-</div>
-
-<button id="open-goalie-data-input-button">Open Goalie Data Input</button>
-
-<div id="goalie-data-input-window" style="display: none;">
-  <h2>Paste Goalie Data</h2>
-  <p class="paste-instructions">
-  </p>
-  <table id="goalie-data-input-table">
-    <tr>
-      <td><input type="text" /></td>
-      <td><input type="text" /></td>
-      <td><input type="text" /></td>
-    </tr>
-  </table>
-  <div class="button-container">
-    <button id="save-goalie-data-button">Save Changes</button>
-    <button id="clear-goalie-data-button">Clear Data</button>
-  </div>
-  <button class="return-button" id="close-goalie-input-window">Return</button>
-</div>
-
-<div class="points-display" id="goalie-points-display" style="display: none;">
-  <h2>Goalie Points</h2>
-  <table id="goalie-points-table">
-    <thead>
-    <tr>
-      <th>Name</th>
-      <th>Team</th>
-      <th>Points</th>
-    </tr>
-    </thead>
-    <tbody>
-    </tbody>
-  </table>
-  <div class="total-points" id="total-goalie-points">Total Points: </div>
-  <button class="return-button" id="close-goalie-points-button">Return</button>
-</div>
-
-<button id="open-data-input-button">Open Data Input</button>
-
-<div id="individual-rankings-display" class="rankings-panel" style="display: none;">
-  <h2>Individual Rankings</h2>
-  <div class="rankings-table-container">
-    <table id="individual-rankings-table">
-      <thead>
-      <tr>
-        <th>Rank</th>
-        <th>User</th>
-        <th>Total Points</th>
-      </tr>
-      </thead>
-      <tbody>
-      </tbody>
-    </table>
-  </div>
-  <button id="close-individual-rankings-button" class="return-button">Close</button>
-</div>
-
-<button id="individual-rankings-button">Individual Rankings</button>
-
-
-<script>
-  const userSelect = document.getElementById('user-select');
-  const addUserButton = document.getElementById('add-user-button');
-  const removeUserButton = document.getElementById('remove-user-button');
-  const addUserForm = document.getElementById('add-user-form');
-  const saveUserButton = document.getElementById('save-user-button');
-  const firstNameInput = document.getElementById('first-name');
-  const lastNameInput = document.getElementById('last-name');
-  const playerDraftSelections = document.getElementById('player-draft-selections');
-  const saveRosterButton = document.getElementById('save-roster-button');
-  const userPointsButton = document.getElementById('user-points-button');
-  const pointsDisplay = document.getElementById('points-display');
-  const pointsTable = document.getElementById('points-table');
-  const closePointsButton = document.getElementById('close-points-button');
-  const totalPointsDisplay = document.getElementById('total-points');
-
-  const individualRankingsButton = document.getElementById('individual-rankings-button');
-  const individualRankingsDisplay = document.getElementById('individual-rankings-display');
-  const individualRankingsTable = document.getElementById('individual-rankings-table');
-  const closeIndividualRankingsButton = document.getElementById('close-individual-rankings-button');
-
-  const dataInputWindow = document.getElementById('data-input-window');
-  const openDataInputButton = document.getElementById('open-data-input-button');
-  const saveDataButton = document.getElementById('save-data-button');
-  const clearDataButton = document.getElementById('clear-data-button');
-  const dataInputTable = document.getElementById('data-input-table');
-  const closeInputWindowButton = document.getElementById('close-input-window');
-
-
-  let users = JSON.parse(localStorage.getItem('users')) || [];
-  let currentUser = null;
-  const localStorageKey = 'fantasyHockeyDraftData';
-  const rawDataKey = 'rawPlayerData';
-  const availableForwards = [
-      ["Connor McDavid (EDM)", "Kyle Connor (WPG)", "Mikko Rantanen (DAL)", "Mitch Marner (TOR)", "Nikita Kucherov (TB)"],
-      ["Alex Ovechkin (WAS)", "Jason Robertson (DAL)", "Leon Draisaitl (EDM)", "Nathan MacKinnon (COL)", "Sam Reinhart (FLA)"],
-      ["Jack Eichel (VEG)", "Jesper Bratt (NJ)", "Martin Necas (COL)", "Nick Suzuki (MON)", "Robert Thomas (STL)"],
-      ["Kirill Kaprizov (MIN)", "Mark Scheifele (WPG)", "Matt Duchene (DAL)", "Sebastian Aho (CAR)", "Tim Stutzle (OTT)"],
-      ["Aleksander Barkov (FLA)", "Auston Matthews (TOR)", "Brandon Hagel (TB)", "Jordan Kyrou (STL)", "Wyatt Johnston (DAL)"],
-      ["Adrian Kempe (LA)", "Brayden Point (TB)", "Cole Caufield (MON)", "Dylan Strome (WAS)", "Nikolaj Ehlers (WPG)"],
-      ["Anze Kopitar (LA)", "Mark Stone (VEG)", "Matt Boldy (MIN)", "Seth Jarvis (CAR)", "William Nylander (TOR)"],
-      ["Brady Tkachuk (OTT)", "Dylan Holloway (STL)", "Jake Guentzel (TB)", "Roope Hintz (DAL)", "Tomas Hertl (VEG)"],
-      ["Aliaksei Protas (WAS)", "Andrei Svechnikov (CAR)", "Brock Nelson (COL)", "Nico Hischier (NJ)", "Ryan Nugent-Hopkins (EDM)"],
-      ["Drake Batherson (OTT)", "John Tavares (TOR)", "Kevin Fiala (LA)", "Marco Rossi (MIN)", "Matthew Tkachuk (FLA)"],
-      ["Gabriel Vilardi (WPG)", "Mikael Granlund (DAL)", "Patrik Laine (MON)", "Pavel Buchnevich (STL)", "Tom Wilson (WAS)"],
-      ["Anthony Cirelli (TB)", "Brad Marchand (FLA)", "Ivan Barbashev (VEG)", "Mats Zuccarello (MIN)", "Pierre-Luc Dubois (WAS)"],
-      ["Connor McMichael (WAS)", "Jonathan Drouin (COL)", "Matthew Knies (TOR)", "Sam Bennett (FLA)", "Zach Hyman (EDM)"],
-      ["Claude Giroux (OTT)", "Joel Eriksson Ek (MIN)", "Quinton Byfield (LA)", "Taylor Hall (CAR)", "Timo Meier (NJ)"],
-      ["Carter Verhaeghe (FLA)", "Cole Perfetti (WPG)", "Dawson Mercer (NJ)", "Juraj Slafkovsky (MON)", "Valeri Nichushkin (COL)"],
-      ["Cale Makar (COL)", "Evan Bouchard (EDM)", "John Carlson (WAS)", "Shea Theodore (VEG)", "Victor Hedman (TB)"],
-      ["Jake Sanderson (OTT)", "Josh Morrissey (WPG)", "Lane Hutson (MON)", "Shayne Gostisbehere (CAR)", "Thomas Harley (DAL)"],
-      ["Aaron Ekblad (FLA)", "Cam Fowler (STL)", "Dougie Hamilton (NJ)", "Drew Doughty (LA)", "Morgan Rielly (TOR)"]
-  ];
-  const availableGoalies = [
-      ["Andrei Vasilevskiy (TB)", "Connor Hellebuyck (WPG)", "Jake Oettinger (DAL)", "Logan Thompson (WAS)", "Sergei Bobrovsky (FLA)"],
-      ["Adin Hill (VEG)", "Jordan Binnington (STL)", "Joseph Woll (TOR)", "Mackenzie Blackwood (COL)", "Pyotr Kochetkov (CAR)"],
-      ["Darcy Kuemper (LA)", "Filip Gustavsson (MIN)", "Linus Ullmark (OTT)", "Sam Montembeault (MON)", "Stuart Skinner (EDM)"]
-  ];
-
-  // Function to save data to local storage
-  function saveDataToLocalStorage() {
-      localStorage.setItem(localStorageKey, JSON.stringify(users));
-      const tableData = getTableData();
-      localStorage.setItem(rawDataKey, JSON.stringify(tableData));
-  }
-
-  // Function to load data from local storage
-  function loadDataFromLocalStorage() {
-      const storedData = localStorage.getItem(localStorageKey);
-      if (storedData) {
-          users = JSON.parse(storedData);
-          populateUserDropdown();
-      }
-      const rawData = localStorage.getItem(rawDataKey);
-      if (rawData) {
-          try {
-              const parsedData = JSON.parse(rawData);
-              populateTable(parsedData);
-          } catch (e) {
-              console.error("Error parsing stored table data:", e);
-              dataInputTable.innerHTML = `<tr><th>Name</th><th>Team</th><th>Points</th></tr>
-                                          <td><input type="text" /></td>
-                                          <td><input type="text" /></td>
-                                          <td><input type="text" /></td>
-                                      </tr>`;
-          }
-      }
-  }
-
-  // Function to populate the user dropdown
-  function populateUserDropdown() {
-      userSelect.innerHTML = '<option value="">-- Select User --</option>';
-      users.forEach(user => {
-          const option = document.createElement('option');
-          option.value = user.id;
-          option.textContent = `${user.firstName} ${user.lastName}`;
-          userSelect.appendChild(option);
-      });
-  }
-
-  // Function to generate player selection dropdowns and pre-select saved players
-function generatePlayerDropdowns() {
-    playerDraftSelections.innerHTML = '';
-    if (currentUser) {
-        for (let i = 0; i < 18; i++) {
-            const playerDiv = document.createElement('div');
-            playerDiv.classList.add('player-selection');
-            const playerLabel = document.createElement('label');
-            playerLabel.textContent = `Player ${i + 1}:`;
-            const playerSelect = document.createElement('select');
-            playerSelect.name = `forward-${i}`;
-            const defaultOption = document.createElement('option');
-            defaultOption.value = "";
-            defaultOption.textContent = "-- Select Player --";
-            playerSelect.appendChild(defaultOption);
-            availableForwards[i].forEach(player => {
-                const option = document.createElement('option');
-                option.value = player;
-                option.textContent = player;
-                option.selected = currentUser.roster.forwards[i] === player;
-                playerSelect.appendChild(option);
-            });
-            playerDiv.appendChild(playerLabel);
-            playerDiv.appendChild(playerSelect);
-            playerDraftSelections.appendChild(playerDiv);
-        }
-
-        for (let i = 0; i < 3; i++) {
-            const goalieDiv = document.createElement('div');
-            goalieDiv.classList.add('player-selection');
-            const goalieLabel = document.createElement('label');
-            goalieLabel.textContent = `Goalie ${i + 1}:`;
-            const goalieSelect = document.createElement('select');
-            goalieSelect.name = `goalie-${i}`;
-            const defaultOption = document.createElement('option');
-            defaultOption.value = "";
-            defaultOption.textContent = "-- Select Goalie --";
-            goalieSelect.appendChild(defaultOption);
-            availableGoalies[i].forEach(player => {
-                const option = document.createElement('option');
-                option.value = player;
-                option.textContent = player;
-                option.selected = currentUser.roster.goalies[i] === player;
-                goalieSelect.appendChild(option);
-            });
-            goalieDiv.appendChild(goalieLabel);
-            goalieDiv.appendChild(goalieSelect);
-            playerDraftSelections.appendChild(goalieDiv);
-        }
-    }
-}
-
-  // Event listener for the "Add User" button
-  addUserButton.addEventListener('click', () => {
-      addUserForm.style.display = 'block';
-  });
-
-  // Event listener for the "Save User" button
-  saveUserButton.addEventListener('click', () => {
-      const firstName = firstNameInput.value.trim();
-      const lastName = lastNameInput.value.trim();
-      if (firstName && lastName) {
-          const newUser = {
-              id: Date.now(),
-              firstName: firstName,
-              lastName: lastName,
-              roster: { forwards: Array(18).fill(""), goalies: Array(3).fill("") }
-          };
-          users.push(newUser);
-          populateUserDropdown();
-          saveDataToLocalStorage();
-          addUserForm.style.display = 'none';
-          firstNameInput.value = '';
-          lastNameInput.value = '';
-      } else {
-          alert('Please enter both first and last names.');
-      }
-  });
-
-  // Event listener for user selection
-  userSelect.addEventListener('change', () => {
-      const selectedUserId = userSelect.value;
-      currentUser = users.find(user => user.id === parseInt(selectedUserId));
-      if (currentUser) {
-          generatePlayerDropdowns();
-      } else {
-          playerDraftSelections.innerHTML = '';
-      }
-  });
-
-  // Event listener for the "Save Roster" button
-  saveRosterButton.addEventListener('click', () => {
-      if (!currentUser) {
-          alert('Please select a user first.');
-          return;
-      }
-
-      const forwardSelections = [];
-      const goalieSelections = [];
-
-      for (let i = 0; i < 18; i++) {
-          const selectElement = playerDraftSelections.querySelector(`select[name="forward-${i}"]`);
-          if (selectElement) {
-              forwardSelections.push(selectElement.value);
-          } else {
-              forwardSelections.push("");
-          }
-      }
-
-      for (let i = 0; i < 3; i++) {
-          const selectElement = playerDraftSelections.querySelector(`select[name="goalie-${i}"]`);
-          if (selectElement) {
-              goalieSelections.push(selectElement.value);
-          } else {
-              goalieSelections.push("");
-          }
-      }
-
-      if (forwardSelections.filter(v => v).length === 18 && goalieSelections.filter(v => v).length === 3) {
-          currentUser.roster.forwards = forwardSelections;
-          currentUser.roster.goalies = goalieSelections;
-          saveDataToLocalStorage();
-          alert(`Roster saved for ${currentUser.firstName} ${currentUser.lastName}!`);
-      } else {
-          alert('Please select 18 players and 3 goalies.');
-      }
-  });
-
-  // Event listener for the "User Points" button
-  userPointsButton.addEventListener('click', () => {
-    if (!currentUser) {
-        alert('Please select a user to view their roster and points.');
-        return;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    // CRITICAL: Ensure firebaseConfig is used safely
+    let firebaseConfig = {};
+    try {
+        // FIX: If __firebase_config is an empty string, JSON.parse will fail, but typeof check is correct.
+        // Assuming __firebase_config should be JSON string or undefined/missing.
+        firebaseConfig = typeof __firebase_config !== 'undefined' && __firebase_config.length > 0 ? JSON.parse(__firebase_config) : {};
+    } catch (e) {
+        console.error("Failed to parse firebase config, check if provided value is valid JSON:", e);
     }
 
-    const playerData = getTableData(); // Get the player data from the table
-    const goalieData = getGoalieTableData(); // Get the goalie data
-    pointsTable.querySelector('tbody').innerHTML = ''; // Clear the table body
-    let totalPoints = 0;
+    const USERS_COLLECTION_PATH = `/artifacts/${appId}/public/data/fantasy_users`;
 
-    // Create a map for quick lookup of player points
-    const playerPointsMap = new Map();
-    if (playerData.length > 1) { // Ensure there's data beyond the header
-        for (let i = 1; i < playerData.length; i++) {
-            if (playerData[i].length === 3) {
-                const playerName = playerData[i][0];
-                const playerPoints = parseInt(playerData[i][2]);
-                if(!isNaN(playerPoints)){
-                   playerPointsMap.set(playerName, playerPoints);
-                }
-            }
+    // --- Loading Timeout Setup ---
+    let loadingTimer = null;
+    const LOADING_TIMEOUT_MS = 7000; // 7 seconds before timeout
+
+    function handleLoadingTimeout() {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay.style.display !== 'none') {
+            loadingOverlay.style.display = 'none';
+            // Show a non-blocking modal to inform the user
+            window.showModal(
+                'Connection Slow',
+                'The cloud database connection is taking longer than expected. You can still log in, but data might be delayed.',
+                false
+            );
         }
     }
+    // --- End Loading Timeout Setup ---
 
+    // Function to save the entire users array to Firestore
+    async function saveUsersToDatabase(newUsers) {
+        if (!db || !currentUserId) return;
 
-    // Create a map for quick lookup of goalie points
-    const goaliePointsMap = new Map();
-     if (goalieData.length > 0) {
-        for (let i = 0; i < goalieData.length; i++) {
-            const goalieName = goalieData[i][0];
-            const wins = parseInt(goalieData[i][2]) || 0;
-            const shutouts = parseInt(goalieData[i][3]) || 0;
-            const basePoints = parseInt(goalieData[i][4]) || 0;
-            const goaliePoints = wins + (shutouts * 2) + basePoints;
-            goaliePointsMap.set(goalieName, goaliePoints);
-        }
-    }
-
-
-    // Clear any existing content in the table.  Keep the headers.
-    pointsTable.innerHTML = `
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Team</th>
-                <th>Points</th>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    `;
-    const tbody = pointsTable.querySelector('tbody');
-
-    // Function to add a row to the table
-    function addPlayerRow(playerName, playerTeam, points) {
-        const row = tbody.insertRow();
-        const nameCell = row.insertCell();
-        nameCell.textContent = playerName;
-        const teamCell = row.insertCell();
-        teamCell.textContent = playerTeam;
-        const pointsCell = row.insertCell();
-        pointsCell.textContent = points;
-    }
-
-    // Display forwards
-    currentUser.roster.forwards.forEach(forward => {
-        if (forward) {
-            const playerName = forward.substring(0, forward.lastIndexOf('(')-1);
-            const playerTeam = forward.substring(forward.lastIndexOf('(') + 1, forward.lastIndexOf(')'));
-            const points = playerPointsMap.get(playerName) || 0; // Default to 0 if not found
-            addPlayerRow(playerName, playerTeam, points);
-            totalPoints += points;
-        }
-    });
-
-    // Display goalies
-    currentUser.roster.goalies.forEach(goalie => {
-        if (goalie) {
-            const goalieName = goalie.substring(0, goalie.lastIndexOf('(') - 1);
-            const goalieTeam = goalie.substring(goalie.lastIndexOf('(') + 1, goalie.lastIndexOf(')'));
-            const points = goaliePointsMap.get(goalieName) || 0;
-            addPlayerRow(goalieName, goalieTeam, points);
-            totalPoints += points;
-        }
-    });
-
-    totalPointsDisplay.textContent = `Total Points: ${totalPoints}`;
-    pointsDisplay.style.display = 'block';
-
-});
-
-  // Event listener for the close button in the points display
-  closePointsButton.addEventListener('click', () => {
-      pointsDisplay.style.display = 'none';
-  });
-
-  // Event listener for the open data input button
-  openDataInputButton.addEventListener('click', () => {
-      dataInputWindow.style.display = 'block';
-  });
-
-  // Event listener for the close data input window
-  closeInputWindowButton.addEventListener('click', () => {
-      dataInputWindow.style.display = 'none';
-  });
-
-  // Function to get the data from the table
-  function getTableData() {
-      const data = [];
-      const rows = dataInputTable.rows;
-      for (let i = 0; i < rows.length; i++) {
-          const rowData = [];const cells = rows[i].cells;
-          for (let j = 0; j < cells.length; j++) {
-              const inputElement = cells[j].querySelector('input');
-              rowData.push(inputElement ? inputElement.value.trim() : cells[j].textContent.trim());
-          }
-          data.push(rowData);
-      }
-      return data;
-  }
-
-  // Function to populate the table with data
-function populateTable(data) {
-    dataInputTable.innerHTML = ''; // Clear the entire table
-    // Add the header row
-    const headerRow = dataInputTable.insertRow();
-    headerRow.insertCell().textContent = 'Name';
-    headerRow.insertCell().textContent = 'Team';
-    headerRow.insertCell().textContent = 'Points';
-
-    if (data && data.length > 1) { // Start from index 1 to skip header row in pasted data
-        for (let i = 1; i < data.length; i++) {
-            const rowData = data[i];
-            if (rowData.length === 3) {
-                const newRow = dataInputTable.insertRow();
-                for (let j = 0; j < rowData.length; j++) {
-                    const newCell = newRow.insertCell();
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.value = rowData[j];
-                    newCell.appendChild(input);
-                }
-            }  else if (rowData.length > 0) {
-                 const newRow = dataInputTable.insertRow();
-                  for (let j = 0; j < rowData.length; j++) {
-                    const newCell = newRow.insertCell();
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.value = rowData[j];
-                    newCell.appendChild(input);
-                }
-                for(let k = rowData.length; k < 3; k++){
-                     const newCell = newRow.insertCell();
-                      const input = document.createElement('input');
-                      input.type = 'text';
-                      newCell.appendChild(input);
-                }
-
-            }else {
-                const newRow = dataInputTable.insertRow();
-                newRow.insertCell().appendChild(document.createElement('input'));
-                newRow.insertCell().appendChild(document.createElement('input'));
-                newRow.insertCell().appendChild(document.createElement('input'));
-            }
-        }
-    } else {
-        // Ensure at least one empty row is present
-        const newRow = dataInputTable.insertRow();
-        newRow.insertCell().appendChild(document.createElement('input'));
-        newRow.insertCell().appendChild(document.createElement('input'));
-        newRow.insertCell().appendChild(document.createElement('input'));
-    }
-}
-
-
-  // Event listener for the save data button
-  saveDataButton.addEventListener('click', () => {
-      const tableData = getTableData();
-       if (tableData.length > 0 && tableData[0].length === 3 && tableData[0][0] === "Name" && tableData[0][1] === "Team" && tableData[0][2] === "Points") {
-          let hasErrors = false;
-          for (let i = 1; i < tableData.length; i++) {
-              if (tableData[i].length !== 3) {
-                  alert(`Invalid data format on row ${i + 1}. Expected 3 values.`);
-                  hasErrors = true;
-                  return;
-              }
-              const points = parseInt(tableData[i][2]);
-              if (isNaN(points)) {
-                  alert(`Invalid points value on row ${i + 1}. Points must be a number.`);
-                  hasErrors = true;
-                  return;
-              }
-          }
-          if (!hasErrors) {
-              saveDataToLocalStorage();
-              alert('Data saved successfully!');
-              dataInputWindow.style.display = 'none';
-              if (currentUser) {
-                  pointsTable.querySelector('tbody').innerHTML = '';
-                  let totalPoints = 0;
-                  for (let i = 1; i < tableData.length; i++) {
-                      const row = pointsTable.insertRow();
-                      const nameCell = row.insertCell();
-                      const teamCell = row.insertCell();
-                      const pointsCell = row.insertCell();
-                      nameCell.textContent = tableData[i][0];
-                      teamCell.textContent = tableData[i][1];
-                      pointsCell.textContent = tableData[i][2];
-                      totalPoints += parseInt(tableData[i][2]);
-                  }
-                  totalPointsDisplay.textContent = `Total Points: ${totalPoints}`;
-              }
-          }
-      } else {
-          alert('Invalid data format. Please use the format: Name  Team  Points');
-          return;
-      }
-  });
-
-  // Event listener for the clear data button
-  clearDataButton.addEventListener('click', () => {
-      dataInputTable.innerHTML = `<tr><th>Name</th><th>Team</th><th>Points</th></tr>
-                                  <tr>
-                                      <td><input type="text" /></td>
-                                      <td><input type="text" /></td>
-                                      <td><input type="text" /></td>
-                                  </tr>`;
-      localStorage.removeItem(rawDataKey);
-      alert('Data cleared!');
-  });
-
-  // Handle paste event in the table
-  dataInputTable.addEventListener('paste', function(event) {
-      event.preventDefault();
-      let pasteData = event.clipboardData.getData('text');
-      pasteData = pasteData.trim();
-      let rows = pasteData.split('\n');
-      let tableRows = dataInputTable.rows;
-
-      let minRows = Math.min(rows.length, tableRows.length);
-
-      for (let i = 0; i < minRows; i++) {
-          let row = rows[i].split('\t');
-          let tableCells = tableRows[i].cells;
-          let minCells = Math.min(row.length, tableCells.length);
-
-          for (let j = 0; j < minCells; j++) {
-              const inputElement = tableCells[j].querySelector('input');
-              if (inputElement) {
-                  inputElement.value = row[j].trim();
-              } else {
-                  tableCells[j].textContent = row[j].trim();
-              }
-          }
-      }
-
-      // Add more rows if pasted data has more rows than the table
-      if (rows.length > tableRows.length) {
-          for (let i = tableRows.length; i < rows.length; i++) {
-              let newRow = dataInputTable.insertRow();
-              let rowData = rows[i].split('\t');
-              for (let j = 0; j < rowData.length; j++) {
-                  let newCell = newRow.insertCell();
-                  const input = document.createElement('input');
-                  input.type = 'text';
-                  input.value = rowData[j].trim();
-                  newCell.appendChild(input);
-              }
-              // Fill remaining cells with empty input fields if rowData is shorter
-              for (let j = rowData.length; j < 3; j++) {
-                  let newCell = newRow.insertCell();
-                  const input = document.createElement('input');
-                  input.type = 'text';
-                  newCell.appendChild(input);
-              }
-          }
-      }
-  });
-
-
-  // Load data from local storage when the page loads
-  loadDataFromLocalStorage();
-
-
-
-
-
-// Get references to the goalie-related elements
-const openGoalieDataInputButton = document.getElementById('open-goalie-data-input-button');
-const goalieDataInputWindow = document.getElementById('goalie-data-input-window');
-const saveGoalieDataButton = document.getElementById('save-goalie-data-button');
-const clearGoalieDataButton = document.getElementById('clear-goalie-data-button');
-const goalieDataTable = document.getElementById('goalie-data-input-table');
-const closeGoalieInputWindowButton = document.getElementById('close-goalie-input-window');
-const goaliePointsDisplay = document.getElementById('goalie-points-display');
-const goaliePointsTable = document.getElementById('goalie-points-table');
-const totalGoaliePointsDisplay = document.getElementById('total-goalie-points');
-const closeGoaliePointsButton = document.getElementById('close-goalie-points-button');
-
-const rawGoalieDataKey = 'rawGoalieData'; // Key for local storage
-
-// Load goalie data from local storage
-function loadGoalieDataFromLocalStorage() {
-    const storedData = localStorage.getItem(rawGoalieDataKey);
-    if (storedData) {
         try {
-            const parsedData = JSON.parse(storedData);
-            populateGoalieTable(parsedData);
-        } catch (error) {
-            console.error('Error parsing goalie data:', error);
-            // Initialize table with an empty row if loading fails
-            goalieDataTable.innerHTML = '';
-            populateGoalieTable([['', '', '', '', '']]);
+            const docRef = doc(db, USERS_COLLECTION_PATH, 'data');
+            // Use setDoc with merge: false to overwrite the single 'data' document
+            await setDoc(docRef, { users: newUsers }, { merge: false });
+            console.log("Data successfully saved to Firestore.");
+        } catch (e) {
+            console.error("Error writing document: ", e);
+            window.showModal('Error', 'Failed to save data to the server. Check console for details.');
         }
-    } else {
-        // Initialize table with an empty row if no data in local storage
-        populateGoalieTable([['', '', '', '', '']]);
     }
-}
 
-// Save goalie data to local storage
-function saveGoalieDataToLocalStorage() {
-    const tableData = getGoalieTableData();
-    localStorage.setItem(rawGoalieDataKey, JSON.stringify(tableData));
-}
+    // Real-time listener function
+    function listenForUserData() {
+        if (!db) return;
 
-// Get goalie data from the table
-function getGoalieTableData() {
-    const data = [];
-    const rows = goalieDataTable.rows;
-    if (rows.length > 1) {
-        for (let i = 1; i < rows.length; i++) {
-            const rowData = [];
-            const cells = rows[i].cells;
-            if (cells.length > 0) {
-                for (let j = 0; j < cells.length; j++) {
-                    const inputElement = cells[j].querySelector('input');
-                    rowData.push(inputElement ? inputElement.value.trim() : '');
-                }
+        const docRef = doc(db, USERS_COLLECTION_PATH, 'data');
+
+        // Attach the real-time listener
+        onSnapshot(docRef, (docSnap) => {
+            // Clear the timeout when data arrives
+            if (loadingTimer) {
+                clearTimeout(loadingTimer);
+                loadingTimer = null;
             }
-            data.push(rowData);
-        }
-    }
-    return data;
-}
+            // Hide the loading overlay once initial data fetch is complete
+            document.getElementById('loading-overlay').style.display = 'none';
 
-// Function to populate the table with data
-function populateGoalieTable(data) {
-    goalieDataTable.innerHTML = ''; // Clear the entire table *before* adding rows
-
-    // Add the header row.
-    const headerRow = goalieDataTable.insertRow();
-    headerRow.insertCell().textContent = 'Name';
-    headerRow.insertCell().textContent = 'Team';
-    headerRow.insertCell().textContent = 'Wins';
-    headerRow.insertCell().textContent = 'Shutouts';
-    headerRow.insertCell().textContent = 'Points';
-
-    // Add the data rows.
-    if (data && data.length > 0) {
-        data.forEach(rowData => {
-            const newRow = goalieDataTable.insertRow();
-            for (let j = 0; j < 5; j++) {
-                const newCell = newRow.insertCell();
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = rowData[j] || '';
-                newCell.appendChild(input);
-            }
-        });
-    } else {
-        // Ensure at least one empty data row is present after the header.  This is important for an empty table.
-        const newRow = goalieDataTable.insertRow();
-        for (let i = 0; i < 5; i++) {
-            const newCell = newRow.insertCell();
-            const input = document.createElement('input');
-            input.type = 'text';
-            newCell.appendChild(input);
-        }
-    }
-}
-
-
-// Event listener for the save data button
-saveGoalieDataButton.addEventListener('click', () => {
-    const tableData = getGoalieTableData();
-    let hasErrors = false;
-
-    for (let i = 0; i < tableData.length; i++) {
-        if (tableData[i].length !== 5) {
-            alert(`Invalid data format on row ${i + 1}. Expected 5 values.  Row will be ignored.`);
-            hasErrors = true;
-            continue; // Skip to the next row
-        }
-        const wins = parseInt(tableData[i][2]);
-        const shutouts = parseInt(tableData[i][3]);
-        const points = parseInt(tableData[i][4]);
-        if (isNaN(wins) || isNaN(shutouts) || isNaN(points)) {
-            alert(`Invalid data value on row ${i + 1}. Wins, Shutouts, and Points must be numbers.  Row will be ignored.`);
-            hasErrors = true;
-            continue; // Skip to the next row
-        }
-    }
-    if (!hasErrors) {
-        saveGoalieDataToLocalStorage();
-        alert('Data saved successfully!');
-        goalieDataInputWindow.style.display = 'none';
-    }
-});
-
-// Event listener for the clear data button
-clearGoalieDataButton.addEventListener('click', () => {
-    goalieDataTable.innerHTML = ''; // Clear the entire table
-    populateGoalieTable([['', '', '', '', '']]); // Add header and one empty row
-    localStorage.removeItem(rawGoalieDataKey);
-    alert('Data cleared!');
-});
-
-// Handle paste event in the table
-goalieDataTable.addEventListener('paste', function (event) {
-    event.preventDefault();
-    let pasteData = event.clipboardData.getData('text');
-    pasteData = pasteData.trim();
-    let rows = pasteData.split('\n');
-    let tableRows = goalieDataTable.rows;
-
-    // Ensure the table has the correct header row
-    if (tableRows.length === 0) {
-        goalieDataTable.insertRow().innerHTML = '<tr><th>Name</th><th>Team</th><th>Wins</th><th>Shutouts</th><th>Points</th></tr>';
-    }
-
-
-    let minRows = Math.min(rows.length, tableRows.length - 1); // Changed to -1 to account for header
-
-    for (let i = 0; i < minRows; i++) {
-        let row = rows[i].split('\t');
-        let tableCells = tableRows[i + 1].cells; // Changed to i+1
-        let minCells = Math.min(row.length, tableCells.length);
-
-        for (let j = 0; j < minCells; j++) {
-            const inputElement = tableCells[j].querySelector('input');
-            if (inputElement) {
-                inputElement.value = row[j].trim();
+            if (docSnap.exists() && docSnap.data().users) {
+                window.users = docSnap.data().users;
+                console.log("Data successfully loaded/updated from Firestore:", window.users);
             } else {
-                tableCells[j].textContent = row[j].trim();
+                // Initialize to an empty array if the document doesn't exist
+                window.users = [];
             }
-        }
-    }
 
-    // Add more rows if pasted data has more rows than the table
-    if (rows.length > tableRows.length - 1) { // changed to -1
-        for (let i = tableRows.length - 1; i < rows.length; i++) { // changed to -1
-            let newRow = goalieDataTable.insertRow();
-            let rowData = rows[i].split('\t');
-            for (let j = 0; j < rowData.length; j++) {
-                let newCell = newRow.insertCell();
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = rowData[j].trim();
-                newCell.appendChild(input);
-            }
-            // Fill remaining cells with empty input fields if rowData is shorter
-            for (let j = rowData.length; j < 5; j++) {
-                let newCell = newRow.insertCell();
-                const input = document.createElement('input');
-                input.type = 'text';
-                newCell.appendChild(input);
-            }
-        }
-    }
-});
-
-
-// Load data from local storage when the page loads
-loadGoalieDataFromLocalStorage();
-
-//open goalie data input
-openGoalieDataInputButton.addEventListener('click', () => {
-    goalieDataInputWindow.style.display = 'block';
-    loadGoalieDataFromLocalStorage();
-
-});
-
-//close goalie data input
-closeGoalieInputWindowButton.addEventListener('click', () => {
-    goalieDataInputWindow.style.display = 'none';
-});
-
-//close goalie points display
-closeGoaliePointsButton.addEventListener('click', () => {
-    goaliePointsDisplay.style.display = 'none';
-});
-
-
-
-
-
-// Function to get all users and their total points (CORRECTED)
-function getAllUsersWithTotalPoints() {
-    const usersWithPoints = [];
-    const playerData = getTableData(); // Get player data
-    const goalieData = getGoalieTableData(); // Get goalie data
-
-    const playerPointsMap = new Map();
-    if (playerData.length > 1) {
-        for (let i = 1; i < playerData.length; i++) {
-            if (playerData[i].length === 3) {
-                const playerName = playerData[i][0];
-                const playerPoints = parseInt(playerData[i][2]);
-                if (!isNaN(playerPoints)) {
-                    playerPointsMap.set(playerName, playerPoints);
-                }
-            }
-        }
-    }
-
-    const goaliePointsMap = new Map();
-    if (goalieData.length > 0) {
-        for (let i = 0; i < goalieData.length; i++) {
-            const goalieName = goalieData[i][0];
-            const wins = parseInt(goalieData[i][2]) || 0;
-            const shutouts = parseInt(goalieData[i][3]) || 0;
-            const basePoints = parseInt(goalieData[i][4]) || 0;
-            const goaliePoints = wins + (shutouts * 2) + basePoints;
-            goaliePointsMap.set(goalieName, goaliePoints);
-        }
-    }
-
-    for (const user of users) {
-        let totalPoints = 0;
-        if (user.roster) {
-            if (user.roster.forwards) {
-                user.roster.forwards.forEach(forward => {
-                    if (forward) {
-                        const playerName = forward.substring(0, forward.lastIndexOf('(') - 1);
-                        totalPoints += playerPointsMap.get(playerName) || 0;
-                    }
-                });
-            }
-            if (user.roster.goalies) {
-                user.roster.goalies.forEach(goalie => {
-                    if (goalie) {
-                        const goalieName = goalie.substring(0, goalie.lastIndexOf('(') - 1);
-                        totalPoints += goaliePointsMap.get(goalieName) || 0;
-                    }
-                });
-            }
-        }
-        usersWithPoints.push({
-            name: `${user.firstName} ${user.lastName}`,
-            totalPoints: totalPoints
+            // Once data is loaded/updated, check if the user is logged in
+            window.checkSessionTeam();
+        }, (error) => {
+            console.error("Error listening to document: ", error);
+            window.showModal('Database Error', 'Lost connection to real-time database.');
         });
     }
-    return usersWithPoints;
-}
 
-// Function to get rank string (1st, 2nd, 3rd, etc.)
-function getRankString(rank) {
-    if (rank === 1) return '1st';
-    if (rank === 2) return '2nd';
-    if (rank === 3) return '3rd';
-    return rank + 'th';
-}
+    // Initialization function
+    async function initializeFirebaseApp() {
+        // Check for missing critical configuration
+        if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
+            const reason = Object.keys(firebaseConfig).length === 0 ? "Configuration object is empty." : "Configuration object is missing apiKey property.";
+            const errorMessage = "The database configuration is missing. Cannot initialize Firebase services. (" + reason + ")";
 
-// Event Listener for Individual Rankings Button (CORRECTED)
-individualRankingsButton.addEventListener('click', () => {
-    // Clear the table body
-    const tbody = individualRankingsTable.querySelector('tbody');
-    if (tbody) {
-        tbody.innerHTML = '';
-    } else {
-        console.error("<tbody> element not found in individualRankingsTable.");
-        return;
+            console.error(errorMessage, "Configuration received:", firebaseConfig);
+
+            document.getElementById('loading-overlay').style.display = 'none';
+            window.showModal('Initialization Error', errorMessage + " Please refresh or contact support if the issue persists.");
+            return; // Stop execution
+        }
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            setLogLevel('Debug');
+
+            // Correct variable name check (already fixed, but confirming)
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+            if (initialAuthToken) {
+                await signInWithCustomToken(auth, initialAuthToken);
+            } else {
+                await signInAnonymously(auth);
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentUserId = user.uid;
+                    listenForUserData();
+                } else {
+                    currentUserId = null;
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    window.showModal('Error', 'Authentication failed. Please refresh.');
+                }
+            });
+
+        } catch (error) {
+            console.error("Firebase initialization failed with full error:", error);
+            window.showModal('Initialization Error', 'Could not connect to the database. Check the console for full error details.');
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
     }
 
-    // Get all users and their total points using the corrected function
-    const usersWithPoints = getAllUsersWithTotalPoints();
+    // Start the app and the timeout immediately
+    loadingTimer = setTimeout(handleLoadingTimeout, LOADING_TIMEOUT_MS);
+    initializeFirebaseApp();
+    window.saveUsersToDatabase = saveUsersToDatabase;
+  </script>
+  <script>
+    (function() {
+        window.users = window.users || [];
+        const generateUniqueId = () => crypto.randomUUID();
+        let resolveModal = null;
+        // CRITICAL CHANGE: These are now in-memory variables, not using localStorage
+        let currentTeamName = null;
+        let currentTeamId = null;
 
-    // Sort the users by total points in descending order
-    usersWithPoints.sort((a, b) => b.totalPoints - a.totalPoints);
+        // --- FIXED PLAYER DATA ---
+        const availableForwards = [
+            ["Connor McDavid (EDM)", "Kyle Connor (WPG)", "Mikko Rantanen (DAL)", "Mitch Marner (TOR)", "Nikita Kucherov (TB)"],
+            ["Alex Ovechkin (WAS)", "Jason Robertson (DAL)", "Leon Draisaitl (EDM)", "Nathan MacKinnon (COL)", "Sam Reinhart (FLA)"],
+            ["Jack Eichel (VEG)", "Jesper Bratt (NJ)", "Martin Necas (COL)", "Nick Suzuki (MON)", "Robert Thomas (STL)"],
+            ["Kirill Kaprizov (MIN)", "Mark Scheifele (WPG)", "Matt Duchene (DAL)", "Sebastian Aho (CAR)", "Tim Stutzle (OTT)"],
+            ["Aleksander Barkov (FLA)", "Auston Matthews (TOR)", "Brandon Hagel (TB)", "Jordan Kyrou (STL)", "Wyatt Johnston (DAL)"],
+            ["Adrian Kempe (LA)", "Brayden Point (TB)", "Cole Caufield (MON)", "Dylan Strome (WAS)", "Nikolaj Ehlers (WPG)"],
+            ["Anze Kopitar (LA)", "Mark Stone (VEG)", "Matt Boldy (MIN)", "Seth Jarvis (CAR)", "William Nylander (TOR)"],
+            ["Brady Tkachuk (OTT)", "Dylan Holloway (STL)", "Jake Guentzel (TB)", "Roope Hintz (DAL)", "Tomas Hertl (VEG)"],
+            ["Aliaksei Protas (WAS)", "Andrei Svechnikov (CAR)", "Brock Nelson (COL)", "Nico Hischier (NJ)", "Ryan Nugent-Hopkins (EDM)"],
+            ["Drake Batherson (OTT)", "John Tavares (TOR)", "Kevin Fiala (LA)", "Marco Rossi (MIN)", "Matthew Tkachuk (FLA)"],
+            ["Gabriel Vilardi (WPG)", "Mikael Granlund (DAL)", "Patrik Laine (MON)", "Pavel Buchnevich (STL)", "Tom Wilson (WAS)"],
+            ["Anthony Cirelli (TB)", "Brad Marchand (FLA)", "Ivan Barbashev (VEG)", "Mats Zuccarello (MIN)", "Pierre-Luc Dubois (WAS)"],
+            ["Connor McMichael (WAS)", "Jonathan Drouin (COL)", "Matthew Knies (TOR)", "Sam Bennett (FLA)", "Zach Hyman (EDM)"],
+            ["Claude Giroux (OTT)", "Joel Eriksson Ek (MIN)", "Quinton Byfield (LA)", "Taylor Hall (CAR)", "Timo Meier (NJ)"],
+            ["Carter Verhaeghe (FLA)", "Cole Perfetti (WPG)", "Dawson Mercer (NJ)", "Juraj Slafkovsky (MON)", "Valeri Nichushkin (COL)"],
+            ["Cale Makar (COL)", "Evan Bouchard (EDM)", "John Carlson (WAS)", "Shea Theodore (VEG)", "Victor Hedman (TB)"],
+            ["Jake Sanderson (OTT)", "Josh Morrissey (WPG)", "Lane Hutson (MON)", "Shayne Gostisbehere (CAR)", "Thomas Harley (DAL)"],
+            ["Aaron Ekblad (FLA)", "Cam Fowler (STL)", "Dougie Hamilton (NJ)", "Drew Doughty (LA)", "Morgan Rielly (TOR)"]
+        ];
+        const availableGoalies = [
+            ["Andrei Vasilevskiy (TB)", "Connor Hellebuyck (WPG)", "Jake Oettinger (DAL)", "Logan Thompson (WAS)", "Sergei Bobrovsky (FLA)"],
+            ["Adin Hill (VEG)", "Jordan Binnington (STL)", "Joseph Woll (TOR)", "Mackenzie Blackwood (COL)", "Pyotr Kochetkov (CAR)"],
+            ["Darcy Kuemper (LA)", "Filip Gustavsson (MIN)", "Linus Ullmark (OTT)", "Sam Montembeault (MON)", "Stuart Skinner (EDM)"]
+        ];
 
-    // Populate the table with user data
-    usersWithPoints.forEach((user, index) => {
-        const row = tbody.insertRow();
-        row.insertCell().textContent = getRankString(index + 1);
-        row.insertCell().textContent = user.name;
-        row.insertCell().textContent = user.totalPoints;
-    });
+        // Flattened lists for easier sequential slicing (90 F/D players, 15 G players)
+        const flatAvailableForwards = availableForwards.flat();
+        const flatAvailableGoalies = availableGoalies.flat();
 
-    // Show the display
-    individualRankingsDisplay.style.display = 'block';
-});
+        const FORWARD_PICKS_COUNT = 18;
+        const GOALIE_PICKS_COUNT = 3;
+        const TOTAL_PICKS_REQUIRED = FORWARD_PICKS_COUNT + GOALIE_PICKS_COUNT;
 
-// Event Listener for Close Individual Rankings Button
-closeIndividualRankingsButton.addEventListener('click', () => {
-    individualRankingsDisplay.style.display = 'none';
-});
+        // --- Modal Implementation ---
+        function showModal(title, message, isConfirmation = false) {
+            const modal = document.getElementById('custom-modal');
+            const backdrop = document.getElementById('custom-modal-backdrop');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const modalConfirmButton = document.getElementById('modal-confirm-button');
+            const modalCancelButton = document.getElementById('modal-cancel-button');
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
 
-// Ensure these elements exist in your HTML
-if (!individualRankingsButton || !individualRankingsDisplay || !individualRankingsTable || !closeIndividualRankingsButton) {
-    console.error("One or more Individual Rankings elements not found in the DOM.");
-}
+            if (isConfirmation) {
+                modalConfirmButton.classList.remove('hidden');
+                modalCancelButton.classList.remove('hidden');
+                modalConfirmButton.focus();
+            } else {
+                modalConfirmButton.classList.add('hidden');
+                modalCancelButton.classList.add('hidden');
+            }
+            modal.classList.remove('hidden');
+            backdrop.classList.remove('hidden');
+
+            return new Promise(resolve => { resolveModal = resolve; });
+        }
+        window.showModal = showModal;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Modal button listeners
+            const modal = document.getElementById('custom-modal');
+            const backdrop = document.getElementById('custom-modal-backdrop');
+            const modalConfirmButton = document.getElementById('modal-confirm-button');
+            const modalCancelButton = document.getElementById('modal-cancel-button');
+            const modalCloseButton = document.getElementById('modal-close-button');
+
+            const handleCloseModal = (result) => {
+                modal.classList.add('hidden');
+                backdrop.classList.add('hidden');
+                if (resolveModal) resolveModal(result);
+            };
+
+            const handleConfirm = () => handleCloseModal(true);
+            const handleCancel = () => handleCloseModal(false);
+            const handleClose = () => {
+                const result = document.getElementById('modal-confirm-button').classList.contains('hidden') === false ? false : undefined;
+                handleCloseModal(result);
+            };
+
+            modalConfirmButton.addEventListener('click', handleConfirm);
+            modalCancelButton.addEventListener('click', handleCancel);
+            modalCloseButton.addEventListener('click', handleClose);
+            document.getElementById('custom-modal-backdrop').addEventListener('click', handleClose);
+
+            // Roster Submission Listeners
+            document.getElementById('team-login-button').addEventListener('click', handleTeamLogin);
+            document.getElementById('submit-roster-button').addEventListener('click', handleSubmitRoster);
+            document.getElementById('logout-button').addEventListener('click', handleLogout);
+            document.getElementById('clear-roster-button').addEventListener('click', handleClearRoster);
+
+            // NOTE: Initial check is handled by the onAuthStateChanged callback in the Firebase module
+            // to ensure data is loaded first.
+        });
+
+        // CRITICAL: This function now relies only on in-memory state and the global window.users array
+        window.checkSessionTeam = function() {
+            const rosterPanel = document.getElementById('roster-panel');
+            const rosterDisplayPanel = document.getElementById('roster-display-panel');
+
+            if (currentTeamName && currentTeamId) {
+                const team = window.users.find(u => u.id === currentTeamId);
+
+                if (team) {
+                    document.getElementById('team-login-panel').classList.add('hidden');
+                    document.getElementById('roster-header').textContent = `Manage Roster: ${currentTeamName}`;
+
+                    const isRosterComplete = team.roster.length === TOTAL_PICKS_REQUIRED;
+
+                    if (isRosterComplete) {
+                        // Show final display, hide inputs (permanent lockout)
+                        rosterPanel.classList.add('hidden');
+                        rosterDisplayPanel.classList.remove('hidden');
+                        document.getElementById('display-roster-header').textContent = `Final Roster: ${currentTeamName}`;
+                        document.getElementById('display-logout-button').onclick = handleLogout;
+                        renderFinalRoster(team.roster);
+                    } else {
+                        // Show inputs, hide final display (draft in progress)
+                        rosterPanel.classList.remove('hidden');
+                        rosterDisplayPanel.classList.add('hidden');
+
+                        document.getElementById('roster-inputs-container').classList.remove('roster-locked');
+                        document.getElementById('submit-roster-button').classList.remove('hidden');
+                        document.getElementById('clear-roster-button').classList.remove('hidden');
+                        document.getElementById('lock-message').classList.add('hidden');
+
+                        renderRosterInputs(team.roster, isRosterComplete);
+                    }
+                } else {
+                    // User was logged in in-memory, but team vanished from the database (shouldn't happen)
+                    handleLogout();
+                }
+            } else {
+                // Not logged in (in-memory state is null)
+                document.getElementById('team-login-panel').classList.remove('hidden');
+                rosterPanel.classList.add('hidden');
+                rosterDisplayPanel.classList.add('hidden');
+                document.getElementById('roster-inputs').innerHTML = '';
+            }
+        }
+
+        // Helper function to create a dropdown menu with exactly 5 players
+        function createPlayerDropdown(availablePlayers, currentSelection, pickIndex, pickType, isGoalie, isDisabled) {
+            const selectId = `${pickType.toLowerCase()}-select-${pickIndex}`;
+            const playerNumber = pickIndex + 1;
+
+            let optionsHtml = `<option value="" disabled ${currentSelection ? '' : 'selected'}>--- Select Player #${playerNumber} ---</option>`;
+            let isSelectionInGroup = false;
+
+            availablePlayers.forEach(player => {
+                const isSelected = player === currentSelection;
+                if (isSelected) isSelectionInGroup = true;
+                optionsHtml += `<option value="${player}" ${isSelected ? 'selected' : ''}>${player}</option>`;
+            });
+
+            // Add the previously selected player if they are NOT in the limited list (preservation)
+            if (currentSelection && !isSelectionInGroup) {
+                const fullList = isGoalie ? flatAvailableGoalies : flatAvailableForwards;
+
+                if (fullList.includes(currentSelection)) {
+                    optionsHtml = `<option value="${currentSelection}" selected class="bg-yellow-100 text-gray-800 font-bold">[Preserved Pick] ${currentSelection}</option>` + optionsHtml;
+                }
+            }
+
+            const disabledAttr = isDisabled ? 'disabled' : '';
+
+            return `
+                <div class="p-3 bg-white rounded-xl shadow-sm border border-gray-100 mb-3 transition ${isDisabled ? 'roster-locked-item' : 'hover:border-blue-300'}">
+                    <label for="${selectId}" class="block text-sm font-semibold text-gray-700 mb-1">Player #${playerNumber}:</label>
+                    <div class="relative select-wrapper">
+                        <select id="${selectId}"
+                                ${disabledAttr}
+                                class="${pickType.toLowerCase()}-pick-select w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Function to render the 21 fixed dropdowns
+        function renderRosterInputs(roster, isRosterComplete) {
+            const rosterInputs = document.getElementById('roster-inputs');
+            rosterInputs.innerHTML = '';
+
+            const currentPicks = roster.map(p => p.name || '');
+
+            // --- FORWARD/DEFENSE PICKS (18 players, 5 players per slot) ---
+            let html = '<h3 class="text-xl font-bold text-green-700 mb-4 border-b pb-2">Forward/Defense Selections (18 Players)</h3>';
+
+            for (let i = 0; i < FORWARD_PICKS_COUNT; i++) {
+                const selectedName = currentPicks[i] || '';
+                const start = i * 5;
+                const end = start + 5;
+                const pickPlayers = flatAvailableForwards.slice(start, end);
+
+                html += createPlayerDropdown(pickPlayers, selectedName, i, 'Draft', false, isRosterComplete);
+            }
+
+            // --- GOALIE PICKS (3 players, 5 players per slot) ---
+            html += '<h3 class="text-xl font-bold text-green-700 mt-8 mb-4 border-b pb-2">Goaltender Selections (3 Players)</h3>';
+
+            for (let i = 0; i < GOALIE_PICKS_COUNT; i++) {
+                const pickIndex = FORWARD_PICKS_COUNT + i;
+                const selectedName = currentPicks[pickIndex] || '';
+                const start = i * 5;
+                const end = start + 5;
+                const pickPlayers = flatAvailableGoalies.slice(start, end);
+
+                html += createPlayerDropdown(pickPlayers, selectedName, pickIndex, 'Goalie', true, isRosterComplete);
+            }
+
+            rosterInputs.innerHTML = html;
+        }
+
+        // Function to render the final read-only roster table
+        function renderFinalRoster(roster) {
+            const container = document.getElementById('final-roster-table-container');
+            let totalPoints = 0;
+
+            let tableHtml = `
+                <table class="min-w-full divide-y divide-gray-200 shadow-md rounded-xl overflow-hidden">
+                    <thead class="bg-indigo-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">#</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">Player Name</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-indigo-700 uppercase tracking-wider">Points</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-100">
+            `;
+
+            roster.forEach((player, index) => {
+                const points = player.points || 0;
+                totalPoints += points;
+
+                tableHtml += `
+                    <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-indigo-50 transition duration-150">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-500">${index + 1}</td>
+                        <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-800 font-semibold">${player.name}</td>
+                        <td class="px-6 py-3 whitespace-nowrap text-right text-sm font-bold text-gray-900">${points}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `
+                    </tbody>
+                    <tfoot class="bg-indigo-100 border-t-4 border-indigo-700">
+                        <tr>
+                            <td colspan="2" class="px-6 py-4 text-right text-base font-extrabold text-indigo-900">Total:</td>
+                            <td class="px-6 py-4 text-right text-base font-extrabold text-indigo-900">${totalPoints}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            `;
+
+            container.innerHTML = tableHtml;
+        }
 
 
+        async function handleTeamLogin() {
+            const teamNameInput = document.getElementById('team-name-input-login').value.trim();
+            if (!teamNameInput) { showModal('Input Required', 'Please enter your Team Name (Username).'); return; }
 
-removeUserButton.addEventListener('click', () => {
-    const selectedUserId = userSelect.value;
-    const selectedOption = userSelect.options[userSelect.selectedIndex];
+            const existingUser = window.users.find(u => u.teamName.toLowerCase() === teamNameInput.toLowerCase());
 
-    if (!selectedUserId) {
-        alert('Please select a user to remove.');
-        return;
-    }
+            if (existingUser) {
+                currentTeamName = existingUser.teamName;
+                currentTeamId = existingUser.id;
+                showModal('Login Successful', `Welcome back, ${currentTeamName}! Your current selections are loaded.`);
+            } else {
+                const confirmation = await showModal(
+                    'New Team Registration',
+                    `The team name "${teamNameInput}" does not exist. Do you want to register a new team with this name?`,
+                    true
+                );
 
-    // **Correction: Ensure consistent type comparison (converting to string)**
-    const userToRemove = users.find(user => String(user.id) === selectedUserId);
+                if (!confirmation) { return; }
 
-    if (!userToRemove) {
-        alert('User not found.');
-        return;
-    }
+                const newTeam = {
+                    id: generateUniqueId(),
+                    teamName: teamNameInput,
+                    roster: [],
+                    totalPoints: 0,
+                    individualPlayerScores: []
+                };
 
-    const confirmation = confirm(`Are you sure you want to remove ${userToRemove.firstName} ${userToRemove.lastName}?`);
-    if (!confirmation) {
-        return; // User cancelled the removal
-    }
+                currentTeamName = newTeam.teamName;
+                currentTeamId = newTeam.id;
+                window.users.push(newTeam);
 
-    // Remove the user from the users array
-    users = users.filter(user => String(user.id) !== selectedUserId);
-    saveDataToLocalStorage();
+                // Immediately save the new user list to the database
+                await window.saveUsersToDatabase(window.users);
 
-    // Remove the selected option from the dropdown
-    userSelect.removeChild(selectedOption);
+                showModal('Registration Complete', `Team ${currentTeamName} has been registered! Please make your selections.`);
+            }
 
-    alert(`User ${userToRemove.firstName} ${userToRemove.lastName} removed successfully!`);
-});
+            document.getElementById('team-name-input-login').value = '';
+            checkSessionTeam();
+        }
 
+        async function handleSubmitRoster() {
+            if (!currentTeamId || !currentTeamName) { showModal('Error', 'Please log in with a Team Name first.'); return; }
 
+            const submittedRosterNames = [];
 
+            const allSelects = document.querySelectorAll('.draft-pick-select, .goalie-pick-select');
+            allSelects.forEach(select => {
+                if (select.value) {
+                    let playerName = select.value;
+                    if (playerName.startsWith('[Preserved Pick]')) {
+                        playerName = playerName.replace('[Preserved Pick] ', '');
+                    }
+                    submittedRosterNames.push(playerName);
+                }
+            });
 
-</script>
+            if (submittedRosterNames.length !== TOTAL_PICKS_REQUIRED) {
+                showModal('Submission Error', `You must select all ${TOTAL_PICKS_REQUIRED} players (18 F/D, 3 G) before submitting your final roster. Currently selected: ${submittedRosterNames.length}`);
+                return;
+            }
+
+            const uniquePicks = new Set(submittedRosterNames);
+            if (uniquePicks.size !== submittedRosterNames.length) {
+                showModal('Duplicate Pick Detected', 'You have selected the same player more than once. Please check your selections and ensure each player is unique before submitting.', false);
+                return;
+            }
+
+            const submittedRosterObjects = submittedRosterNames.map(name => {
+                const isGoalie = flatAvailableGoalies.includes(name);
+                const position = isGoalie ? 'G' : 'F/D';
+
+                return {
+                    id: generateUniqueId(),
+                    name: name,
+                    points: 0,
+                    position: position,
+                    overallRank: 0
+                };
+            });
+
+            const newUsers = window.users.map(user => {
+                if (user.id === currentTeamId) {
+                    return { ...user, roster: submittedRosterObjects };
+                }
+                return user;
+            });
+
+            window.users = newUsers;
+
+            await window.saveUsersToDatabase(newUsers);
+
+            showModal('Roster Submitted & Locked!', `Your final roster with ${submittedRosterNames.length} players has been saved and is now locked for ${currentTeamName}!`);
+
+            window.checkSessionTeam();
+        }
+
+        async function handleClearRoster() {
+             if (!currentTeamId) return;
+             const confirmation = await showModal('Confirm Clear', `Are you sure you want to clear ALL player selections for ${currentTeamName}? This action is usually only done during the draft process.`, true);
+             if (!confirmation) return;
+
+             const newUsers = window.users.map(user => {
+                if (user.id === currentTeamId) {
+                    return { ...user, roster: [] };
+                }
+                return user;
+            });
+
+            window.users = newUsers;
+
+            await window.saveUsersToDatabase(newUsers);
+            window.checkSessionTeam();
+            showModal('Selections Cleared', `All draft selections for ${currentTeamName} have been reset. Please make new picks and SUBMIT.`);
+        }
+
+        // CRITICAL: This function now clears only the in-memory session state
+        function handleLogout() {
+            currentTeamName = null;
+            currentTeamId = null;
+            checkSessionTeam();
+        }
+
+    })();
+  </script>
+</head>
+<body class="p-4 md:p-8 bg-gray-50">
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+  <div class="text-center">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+    <p class="mt-4 text-lg text-green-600 font-semibold">Connecting to Cloud Database...</p>
+  </div>
+</div>
+
+<!-- Custom Modal Structure -->
+<div id="custom-modal-backdrop" class="fixed inset-0 bg-black bg-opacity-50 hidden"></div>
+<div id="custom-modal" class="fixed inset-0 flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-100" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="flex justify-between items-center p-5 border-b border-gray-200">
+      <h3 id="modal-title" class="text-xl font-bold text-gray-900">Modal Title</h3>
+      <button id="modal-close-button" class="text-gray-400 hover:text-gray-600 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="p-5">
+      <p id="modal-message" class="text-gray-700"></p>
+    </div>
+    <div class="p-5 border-t border-gray-200 flex justify-end space-x-3">
+      <button id="modal-cancel-button" class="hidden px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition focus:outline-none">
+        Cancel
+      </button>
+      <button id="modal-confirm-button" class="hidden px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition focus:outline-none">
+        Confirm
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="max-w-xl mx-auto">
+  <header class="text-center mb-8 p-4 bg-white rounded-xl shadow-lg">
+    <h1 class="text-4xl font-extrabold text-green-700">Team Roster Entry</h1>
+    <p class="text-gray-500 mt-2">Submit your **21-player draft selections** below.</p>
+    <p class="mt-4 text-sm text-gray-600">
+      <a href="master.html" class="font-bold text-blue-500 hover:text-blue-700 underline">Go to Admin/Rankings Page (Requires Master Login)</a>
+    </p>
+  </header>
+
+  <!-- Team Login Panel -->
+  <div id="team-login-panel" class="p-6 bg-white rounded-xl shadow-lg border border-blue-100 mb-8">
+    <h2 class="text-2xl font-bold text-blue-600 mb-4">Team Login / Register</h2>
+    <p class="text-gray-600 mb-4">Enter your team name (username) to submit your roster. New names will be registered automatically. (Data syncs across devices.)</p>
+
+    <input type="text" id="team-name-input-login" placeholder="Your Team Name (e.g., Connor)" class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg">
+
+    <button id="team-login-button" class="w-full bg-blue-500 text-white p-3 rounded-lg font-semibold hover:bg-blue-600 transition shadow-md">
+      Login / Register Team
+    </button>
+  </div>
+
+  <!-- Roster Management Panel (Hidden by default - Selection Window) -->
+  <div id="roster-panel" class="p-6 bg-white rounded-xl shadow-lg border border-green-100 mb-8 hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h2 id="roster-header" class="text-2xl font-bold text-green-600">Manage Roster</h2>
+      <button id="logout-button" class="text-sm text-gray-500 hover:text-gray-700 underline">Logout</button>
+    </div>
+
+    <p id="lock-message" class="hidden bg-indigo-100 text-indigo-700 p-3 rounded-lg font-medium text-center mb-6 border-l-4 border-indigo-500">
+      ✅ **Roster Complete & Locked!** You have selected all 21 players.
+    </p>
+
+    <!-- Roster Input Container (Fixed 21 Dropdowns inserted here) -->
+    <div id="roster-inputs-container">
+      <div id="roster-inputs" class="space-y-4">
+        <!-- Dropdowns are inserted by renderRosterInputs() -->
+      </div>
+    </div>
+
+    <div class="flex space-x-4 mt-8">
+      <button id="submit-roster-button" class="flex-1 bg-green-600 text-white p-4 rounded-xl font-extrabold hover:bg-green-700 transition shadow-lg">
+        SUBMIT & SAVE ROSTER (21 PICKS)
+      </button>
+      <button id="clear-roster-button" class="w-24 bg-red-500 text-white p-4 rounded-xl font-semibold hover:bg-red-600 transition shadow-lg" title="Clear All Selections">
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <!-- Final Roster Display Panel (Hidden by default - Locked View) -->
+  <div id="roster-display-panel" class="p-6 bg-white rounded-xl shadow-lg border border-indigo-200 mb-8 hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h2 id="display-roster-header" class="text-2xl font-bold text-indigo-700">Final Roster: Team Name</h2>
+      <button id="display-logout-button" class="text-sm text-gray-500 hover:text-gray-700 underline">Logout</button>
+    </div>
+    <p class="text-indigo-600 mb-4 font-medium border-b pb-2">This is your locked, final 21-player roster. Points will update here automatically.</p>
+    <div id="final-roster-table-container">
+      <!-- Roster table inserted here by renderFinalRoster() -->
+    </div>
+  </div>
+</div>
 </body>
 </html>
