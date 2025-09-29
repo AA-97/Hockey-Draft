@@ -52,17 +52,32 @@
     let currentUserId = null;
     window.users = [];
 
+    // 1. **CRITICAL CHANGE FOR DEPLOYMENT**: Define your Firebase configuration here.
+    //    If you are hosting this on Render/Netlify/Vercel, you MUST replace these
+    //    placeholder values with your actual Firebase project configuration credentials.
+    //    Otherwise, the app will not connect to the database.
+    let firebaseConfig = {
+        apiKey: "YOUR_FIREBASE_API_KEY_HERE",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // 2. **FALLBACK/OVERRIDE for Canvas environment**: If running in Canvas, use the injected config and app ID.
+    //    If you deploy this outside Canvas, you can remove this try/catch block.
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    // CRITICAL: Ensure firebaseConfig is used safely
-    let firebaseConfig = {};
     try {
-        // FIX: If __firebase_config is an empty string, JSON.parse will fail, but typeof check is correct.
-        // Assuming __firebase_config should be JSON string or undefined/missing.
-        firebaseConfig = typeof __firebase_config !== 'undefined' && __firebase_config.length > 0 ? JSON.parse(__firebase_config) : {};
+        const injectedConfig = typeof __firebase_config !== 'undefined' && __firebase_config.length > 0 ? JSON.parse(__firebase_config) : {};
+        if (Object.keys(injectedConfig).length > 0 && injectedConfig.apiKey) {
+             firebaseConfig = injectedConfig; // Override with injected config if available
+        }
     } catch (e) {
-        console.error("Failed to parse firebase config, check if provided value is valid JSON:", e);
+        console.error("Failed to parse injected firebase config. Using placeholder/manual config.");
     }
 
+    // Use Canvas's structured path (relies on __app_id)
     const USERS_COLLECTION_PATH = `/artifacts/${appId}/public/data/fantasy_users`;
 
     // --- Loading Timeout Setup ---
@@ -85,7 +100,11 @@
 
     // Function to save the entire users array to Firestore
     async function saveUsersToDatabase(newUsers) {
-        if (!db || !currentUserId) return;
+        // Check if db and userId are available before attempting save
+        if (!db || !auth.currentUser || !auth.currentUser.uid) {
+            console.error("Attempted to save data before Firebase connection was established or user was authenticated.");
+            return;
+        }
 
         try {
             const docRef = doc(db, USERS_COLLECTION_PATH, 'data');
@@ -132,15 +151,14 @@
 
     // Initialization function
     async function initializeFirebaseApp() {
-        // Check for missing critical configuration
-        if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
-            const reason = Object.keys(firebaseConfig).length === 0 ? "Configuration object is empty." : "Configuration object is missing apiKey property.";
-            const errorMessage = "The database configuration is missing. Cannot initialize Firebase services. (" + reason + ")";
+        // Check if user has replaced the placeholder config for deployment
+        if (firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY_HERE" || !firebaseConfig.apiKey) {
+            const errorMessage = "Firebase configuration is missing or using placeholder values. If deploying to Render, please replace the 'YOUR_...' values in the JS code with your real Firebase credentials.";
 
             console.error(errorMessage, "Configuration received:", firebaseConfig);
 
             document.getElementById('loading-overlay').style.display = 'none';
-            window.showModal('Initialization Error', errorMessage + " Please refresh or contact support if the issue persists.");
+            window.showModal('Initialization Error', errorMessage + " If you are running this within the original Canvas, please ensure the configuration is being properly injected.");
             return; // Stop execution
         }
 
@@ -150,12 +168,13 @@
             auth = getAuth(app);
             setLogLevel('Debug');
 
-            // Correct variable name check (already fixed, but confirming)
+            // Standard Firebase Auth Check (prioritizes Canvas custom token if available)
             const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
             if (initialAuthToken) {
                 await signInWithCustomToken(auth, initialAuthToken);
             } else {
+                // Use anonymous sign-in for standard deployments (like Render)
                 await signInAnonymously(auth);
             }
 
@@ -172,7 +191,7 @@
 
         } catch (error) {
             console.error("Firebase initialization failed with full error:", error);
-            window.showModal('Initialization Error', 'Could not connect to the database. Check the console for full error details.');
+            window.showModal('Initialization Error', 'Could not connect to the database. Check the console for full error details. (Did you include your config?)');
             document.getElementById('loading-overlay').style.display = 'none';
         }
     }
